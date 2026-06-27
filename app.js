@@ -95,22 +95,34 @@ function aplicarFiltros(vinhos) {
     return true;
   });
 
+  // Rascunhos (vindos do lote, ainda não revisados) vão para o topo.
+  filtrados.sort((a, b) => (b.rascunho ? 1 : 0) - (a.rascunho ? 1 : 0));
+
   const lista = $("#lista");
   if (filtrados.length === 0) {
-    lista.innerHTML = `<p class="vazio-msg">Nenhum vinho aqui ainda. Toque em ➕ Adicionar.</p>`;
+    lista.innerHTML = `<p class="vazio-msg">Nenhum vinho aqui ainda. Toque em ➕ Um vinho ou 📸 Vários.</p>`;
     return;
   }
-  lista.innerHTML = filtrados
+
+  const nRascunhos = vinhos.filter((v) => v.rascunho).length;
+  const aviso = nRascunhos
+    ? `<div class="banner-rascunho">📋 ${nRascunhos} rascunho(s) para revisar — toque em cada um para completar.</div>`
+    : "";
+
+  lista.innerHTML = aviso + filtrados
     .map((v) => {
       const c = avaliarConsumo(v);
       const foto = v.fotoDataURL ? `<img src="${v.fotoDataURL}" alt="">` : `<img alt="">`;
+      const tagEstado = v.rascunho
+        ? '<span class="tag rascunho">📋 revisar</span>'
+        : `<span class="tag ${c.estado}">${rotuloEstado(c.estado)}</span>`;
       return `
       <div class="cartao-vinho" data-id="${v.id}">
         ${foto}
         <div>
           <div class="nome">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
           <div class="meta">${esc(v.produtor) || "—"} · ${formatarEndereco(v.posicao)}</div>
-          <span class="tag ${c.estado}">${rotuloEstado(c.estado)}</span>
+          ${tagEstado}
           ${v.display ? '<span class="tag otima">★ display</span>' : ""}
         </div>
         <div class="qtd">${v.quantidade || 0}🍾</div>
@@ -182,7 +194,10 @@ function preencherForm(v) {
   $("#f-posicao-nota").value = v.posicao?.posicaoNota || "";
   $("#f-display").checked = !!v.display;
   $("#f-notas").value = v.notas || "";
-  fotoAtual = { dataURL: v.fotoDataURL || "", base64: "", mime: "" };
+  // Reconstrói a foto (inclui o base64) para que o "Buscar dados (IA)" possa reenviá-la.
+  fotoAtual = v.fotoDataURL
+    ? { dataURL: v.fotoDataURL, base64: v.fotoDataURL.split(",")[1] || "", mime: "image/jpeg" }
+    : { dataURL: "", base64: "", mime: "" };
   if (v.fotoDataURL) $("#f-foto-preview").src = v.fotoDataURL;
   else $("#f-foto-preview").removeAttribute("src");
   $("#ia-status").textContent = "";
@@ -226,6 +241,7 @@ function lerForm() {
     display: $("#f-display").checked,
     notas: $("#f-notas").value.trim(),
     fotoDataURL: fotoAtual.dataURL,
+    rascunho: false, // salvar pelo formulário confirma (deixa de ser rascunho)
     editadoEm: new Date().toISOString(),
   };
 }
@@ -295,7 +311,7 @@ function processarFoto(arquivo) {
 $("#btn-ia").addEventListener("click", async () => {
   const provedor = (await DB.lerConfig("provedor")) || "anthropic";
   const apiKey = await DB.lerConfig("apiKey");
-  const modelo = (await DB.lerConfig("modelo")) || "claude-opus-4-8";
+  const modelo = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
   if (!apiKey) {
     $("#ia-status").textContent = "⚠️ Configure sua chave de API nos Ajustes.";
     return;
@@ -455,7 +471,7 @@ function marcaOrigem(origem, textoVazio) {
 async function carregarAjustes() {
   $("#cfg-provedor").value = (await DB.lerConfig("provedor")) || "anthropic";
   $("#cfg-apikey").value = (await DB.lerConfig("apiKey")) || "";
-  $("#cfg-modelo").value = (await DB.lerConfig("modelo")) || "claude-opus-4-8";
+  $("#cfg-modelo").value = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
 
   const cap = (await DB.lerConfig("capacidades")) || capacidadesPadrao();
   $("#cfg-capacidades").innerHTML = Object.entries(cap)
@@ -533,6 +549,97 @@ function esc(s) {
   return String(s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+// ===================================================================
+//  TELA LOTE — cadastrar vários por foto
+// ===================================================================
+let filaLote = [];       // fotos a processar
+let loteRodando = false; // evita rodar a fila duas vezes ao mesmo tempo
+
+// Ao escolher as fotos: comprime cada uma, põe na fila e começa a processar.
+$("#lote-fotos").addEventListener("change", async (e) => {
+  const arquivos = Array.from(e.target.files || []);
+  e.target.value = "";
+  for (const arq of arquivos) {
+    const f = await processarFoto(arq); // reaproveita a compressão do formulário
+    filaLote.push({ id: gerarId(), dataURL: f.dataURL, base64: f.base64, mime: f.mime, status: "fila", nome: "", erro: "" });
+  }
+  renderFila();
+  processarFila();
+});
+
+// Mostra a fila com miniatura e status de cada foto.
+function renderFila() {
+  const cont = $("#lote-fila");
+  if (filaLote.length === 0) { cont.innerHTML = ""; $("#lote-resumo").textContent = ""; return; }
+  const txt = { fila: "⏳ na fila", processando: "🔎 identificando…", pronto: "✓ pronto", erro: "❌ erro" };
+  cont.innerHTML = filaLote
+    .map((it) => `
+      <div class="cartao-vinho">
+        <img src="${it.dataURL}" alt="">
+        <div>
+          <div class="nome">${esc(it.nome) || "(identificando…)"}</div>
+          <div class="meta">${txt[it.status]}${it.erro ? " · " + esc(it.erro) : ""}</div>
+        </div>
+      </div>`)
+    .join("");
+  const prontos = filaLote.filter((i) => i.status === "pronto").length;
+  $("#lote-resumo").textContent =
+    `${prontos}/${filaLote.length} identificados. Revise na tela Início (marcados como rascunho).`;
+}
+
+// Processa a fila, uma foto de cada vez, em modo RÁPIDO (sem busca web).
+async function processarFila() {
+  if (loteRodando) return;
+  loteRodando = true;
+  const provedor = (await DB.lerConfig("provedor")) || "anthropic";
+  const apiKey = await DB.lerConfig("apiKey");
+  const modelo = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
+  if (!apiKey) {
+    $("#lote-resumo").textContent = "⚠️ Configure sua chave de API nos Ajustes.";
+    loteRodando = false;
+    return;
+  }
+  for (const item of filaLote) {
+    if (item.status !== "fila") continue;
+    item.status = "processando";
+    renderFila();
+    try {
+      const res = await IA.extrair({
+        provedor, apiKey, modelo, comBusca: false,
+        texto: "Leia o rótulo desta foto.",
+        fotoBase64: item.base64, fotoMime: item.mime,
+      });
+      const v = montarRascunho(res, item.dataURL);
+      await DB.salvar(v);
+      item.nome = v.nome || "(sem nome)";
+      item.status = "pronto";
+    } catch (err) {
+      item.status = "erro";
+      item.erro = err.message;
+    }
+    renderFila();
+  }
+  loteRodando = false;
+}
+
+// Transforma o resultado da IA num vinho-rascunho (com bons padrões).
+function montarRascunho(res, dataURL) {
+  return {
+    id: gerarId(),
+    rascunho: true,
+    nome: res.nome || "", produtor: res.produtor || "", regiao: res.regiao || "",
+    pais: res.pais || "", uvas: Array.isArray(res.uvas) ? res.uvas : [],
+    safra: res.safra ?? null,
+    tipo: res.tipo === "tinto" || res.tipo === "branco" ? res.tipo : "tinto",
+    formato: "750ml", formatoOutro: "", quantidade: 1,
+    preco: { min: null, max: null, moeda: "R$", origem: "vazio" },
+    janelaInicio: null, janelaFim: null, janelaOrigem: "vazio",
+    posicao: { porta: 1, nivel: "N1", posicaoNum: null, posicaoNota: "" },
+    display: false, notas: res.observacao || "",
+    fotoDataURL: dataURL, editadoEm: new Date().toISOString(),
+  };
 }
 
 // ————— Início de tudo —————

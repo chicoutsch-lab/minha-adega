@@ -1,25 +1,20 @@
 /*
   ai.js — fala com a API de IA para extrair dados de um vinho.
 
-  REGRA INEGOCIÁVEL embutida no pedido (system prompt): a IA só preenche o que
-  a fonte realmente traz. Campo sem dado confiável volta VAZIO. Preço e janela
-  de consumo vêm marcados como "fonte" (confirmado), "estimativa" ou "vazio".
-  Nunca inventar.
+  Dois modos (parâmetro "comBusca"):
+    - comBusca: false → RÁPIDO. Só lê o rótulo da foto (nome, produtor, safra,
+      uva, região). Não pesquisa na web. Usado no cadastro em lote.
+    - comBusca: true  → COMPLETO. Pesquisa na web para trazer também preço e
+      janela de consumo. Mais lento. Usado quando você quer enriquecer um vinho.
 
-  A chave de API é fornecida por você nos Ajustes e fica só no aparelho.
-  Padrão: Anthropic (Claude) com busca web. OpenAI é uma alternativa.
+  REGRA INEGOCIÁVEL: a IA só preenche o que a fonte traz. Sem dado confiável,
+  o campo volta vazio. Preço e janela vêm marcados como "fonte"/"estimativa"/
+  "vazio". Nunca inventar. A chave de API fica só no aparelho.
 */
 
 const IA = (() => {
-  // Texto que orienta a IA. É aqui que a honestidade vira regra.
-  const INSTRUCAO = `Você ajuda a catalogar vinhos. Pesquise na web para confirmar os dados do rótulo.
-REGRAS:
-- Só preencha um campo se houver fonte confiável. Sem fonte, devolva vazio (null ou "").
-- NUNCA invente preço nem janela de consumo. Se não achar, marque origem "vazio".
-- Para PREÇO e JANELA, marque "origem": "fonte" se veio de fonte clara, "estimativa" se é uma dedução sua sem fonte direta, "vazio" se não há base.
-- Janela de consumo é sempre uma FAIXA de anos (início e fim), nunca data exata.
-- "tipo" deve ser "tinto" ou "branco" (rosé/espumante: trate como "branco").
-Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
+  // Formato de resposta comum aos dois modos.
+  const FORMATO = `Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
 {
   "nome": "", "produtor": "", "regiao": "", "pais": "",
   "uvas": [], "safra": null, "tipo": null,
@@ -28,7 +23,24 @@ Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
   "fontes": [], "observacao": ""
 }`;
 
-  // Extrai o primeiro bloco { ... } de um texto (a IA às vezes adiciona conversa).
+  // Modo RÁPIDO: só o rótulo, sem pesquisa.
+  const INSTRUCAO_RAPIDA = `Você cataloga vinhos. Leia o RÓTULO desta foto e preencha o que estiver
+visível ou que você reconheça com segurança: nome, produtor, região, país, uvas, safra, tipo
+("tinto" ou "branco"; rosé/espumante trate como "branco").
+NÃO pesquise na web. Deixe preço e janela com valores null e "origem": "vazio".
+Se um campo não estiver legível, deixe vazio.
+${FORMATO}`;
+
+  // Modo COMPLETO: pesquisa na web para preço e janela.
+  const INSTRUCAO_COMPLETA = `Você cataloga vinhos. Pesquise na web para confirmar os dados.
+REGRAS:
+- Só preencha um campo se houver fonte confiável. Sem fonte, devolva vazio (null ou "").
+- NUNCA invente preço nem janela. Se não achar, marque origem "vazio".
+- Para PREÇO e JANELA: "origem" = "fonte" (fonte clara), "estimativa" (dedução sua) ou "vazio".
+- Janela de consumo é sempre uma FAIXA de anos (início e fim), nunca data exata.
+- "tipo" = "tinto" ou "branco" (rosé/espumante: "branco").
+${FORMATO}`;
+
   function extrairJSON(texto) {
     const ini = texto.indexOf("{");
     const fim = texto.lastIndexOf("}");
@@ -37,7 +49,7 @@ Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
   }
 
   // —— Anthropic (Claude) ——
-  async function viaAnthropic({ apiKey, modelo, texto, fotoBase64, fotoMime }) {
+  async function viaAnthropic({ apiKey, modelo, texto, fotoBase64, fotoMime, comBusca }) {
     const conteudo = [];
     if (fotoBase64) {
       conteudo.push({
@@ -47,11 +59,11 @@ Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
     }
     conteudo.push({ type: "text", text: texto || "Extraia os dados deste vinho." });
 
+    const ferramentas = comBusca ? [{ type: "web_search_20260209", name: "web_search" }] : [];
     let messages = [{ role: "user", content: conteudo }];
     let resposta;
 
-    // A busca web roda no servidor da Anthropic em várias etapas. Se ele
-    // "pausar" (pause_turn), reenviamos para continuar — até 5 vezes.
+    // Com busca web, o servidor pode "pausar" (pause_turn) — reenviamos para continuar.
     for (let i = 0; i < 6; i++) {
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -59,14 +71,13 @@ Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
           "content-type": "application/json",
           "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
-          // Permite chamar a API direto do navegador (Safari).
           "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify({
           model: modelo,
           max_tokens: 2048,
-          system: INSTRUCAO,
-          tools: [{ type: "web_search_20260209", name: "web_search" }],
+          system: comBusca ? INSTRUCAO_COMPLETA : INSTRUCAO_RAPIDA,
+          tools: ferramentas,
           messages,
         }),
       });
@@ -76,13 +87,11 @@ Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
       }
       resposta = await r.json();
       if (resposta.stop_reason === "pause_turn") {
-        // Continua de onde parou.
         messages = [...messages, { role: "assistant", content: resposta.content }];
         continue;
       }
       break;
     }
-    // Junta todos os blocos de texto da resposta final.
     const texto_resp = (resposta.content || [])
       .filter((b) => b.type === "text")
       .map((b) => b.text)
@@ -90,21 +99,19 @@ Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
     return extrairJSON(texto_resp);
   }
 
-  // —— OpenAI (alternativa; pode variar conforme o modelo) ——
-  async function viaOpenAI({ apiKey, modelo, texto, fotoBase64, fotoMime }) {
-    const conteudo = [{ type: "input_text", text: (texto || "Extraia os dados deste vinho.") + "\n\n" + INSTRUCAO }];
+  // —— OpenAI (alternativa) ——
+  async function viaOpenAI({ apiKey, modelo, texto, fotoBase64, fotoMime, comBusca }) {
+    const instrucao = comBusca ? INSTRUCAO_COMPLETA : INSTRUCAO_RAPIDA;
+    const conteudo = [{ type: "input_text", text: (texto || "Extraia os dados deste vinho.") + "\n\n" + instrucao }];
     if (fotoBase64) {
-      conteudo.push({
-        type: "input_image",
-        image_url: `data:${fotoMime};base64,${fotoBase64}`,
-      });
+      conteudo.push({ type: "input_image", image_url: `data:${fotoMime};base64,${fotoBase64}` });
     }
     const r = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: modelo,
-        tools: [{ type: "web_search" }],
+        tools: comBusca ? [{ type: "web_search" }] : [],
         input: [{ role: "user", content: conteudo }],
       }),
     });
@@ -113,7 +120,6 @@ Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
       throw new Error(`Erro da API (${r.status}): ${erro.slice(0, 300)}`);
     }
     const data = await r.json();
-    // Procura o texto de saída em formatos comuns da Responses API.
     let saida = data.output_text;
     if (!saida && Array.isArray(data.output)) {
       saida = data.output
@@ -127,10 +133,10 @@ Responda SOMENTE com um objeto JSON neste formato, sem texto fora dele:
   }
 
   return {
-    // Função única usada pelo app. Decide o provedor e devolve o objeto extraído.
-    async extrair({ provedor, apiKey, modelo, texto, fotoBase64, fotoMime }) {
+    // comBusca = true por padrão (modo completo). O lote chama com false.
+    async extrair({ provedor, apiKey, modelo, texto, fotoBase64, fotoMime, comBusca = true }) {
       if (!apiKey) throw new Error("Configure sua chave de API nos Ajustes primeiro.");
-      const args = { apiKey, modelo, texto, fotoBase64, fotoMime };
+      const args = { apiKey, modelo, texto, fotoBase64, fotoMime, comBusca };
       return provedor === "openai" ? viaOpenAI(args) : viaAnthropic(args);
     },
   };

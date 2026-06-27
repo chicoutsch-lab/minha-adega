@@ -192,6 +192,28 @@
   <div id="detalhe" class="detalhe"></div>
 </section>
 
+<!-- ===================== TELA: CADASTRAR VÁRIOS (LOTE) ===================== -->
+<section id="tela-lote" class="tela">
+  <header class="cabecalho">
+    <button class="link" data-ir="tela-inicio">‹ Voltar</button>
+    <h1>Cadastrar vários</h1>
+  </header>
+
+  <div class="cartao">
+    <p class="dica">
+      Tire as fotos dos rótulos pelo app <b>Câmera</b> e depois selecione todas aqui.
+      O app identifica o rótulo de cada uma — rápido, <b>sem buscar preço</b>.
+      Os vinhos viram <b>rascunhos</b> que você revisa e completa depois, na tela Início.
+    </p>
+    <label class="btn-principal arquivo-label" style="text-align:center">📸 Selecionar fotos
+      <input id="lote-fotos" type="file" accept="image/*" multiple hidden />
+    </label>
+    <p id="lote-resumo" class="ia-status"></p>
+  </div>
+
+  <div id="lote-fila" class="lista"></div>
+</section>
+
 <!-- ===================== TELA: AJUSTES ===================== -->
 <section id="tela-ajustes" class="tela">
   <header class="cabecalho">
@@ -233,7 +255,8 @@
 <!-- ===================== BARRA INFERIOR ===================== -->
 <nav class="barra">
   <button data-ir="tela-inicio" class="ativo">🏠<span>Início</span></button>
-  <button id="nav-adicionar">➕<span>Adicionar</span></button>
+  <button id="nav-adicionar">➕<span>Um vinho</span></button>
+  <button id="nav-lote" data-ir="tela-lote">📸<span>Vários</span></button>
   <button data-ir="tela-ajustes">⚙️<span>Ajustes</span></button>
 </nav>
 

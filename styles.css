@@ -167,3 +167,11 @@ legend { padding: 0 .4rem; color: var(--vinho-claro); font-weight: 600; }
 .barra button.ativo { color: var(--vinho-claro); }
 
 .vazio-msg { color: var(--texto-fraco); text-align: center; padding: 1.5rem 1rem; font-size: .9rem; }
+
+/* Rascunhos (cadastro em lote, aguardando revisão) */
+.tag.rascunho { background: #7a5a1a; color: #ffe9c2; }
+.banner-rascunho {
+  background: rgba(217,154,58,.16); border: 1px solid var(--estimativa);
+  color: var(--texto); border-radius: 12px; padding: .7rem .8rem;
+  font-size: .85rem; margin-bottom: .2rem;
+}
