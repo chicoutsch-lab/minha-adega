@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Minha Adega</title>
+
+  <!-- Cor da barra e identidade do app -->
+  <meta name="theme-color" content="#5b1a2e" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+
+  <!-- Faz o iPhone abrir em tela cheia quando instalado na tela inicial -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Adega" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+<!-- ===================== TELA: INÍCIO ===================== -->
+<section id="tela-inicio" class="tela ativa">
+  <header class="cabecalho">
+    <h1>Minha Adega</h1>
+    <span id="contador" class="contador"></span>
+  </header>
+
+  <!-- DESTAQUE MÁXIMO: vinhos saindo da janela, ordenados por urgência -->
+  <div id="bloco-alertas" class="bloco-alertas">
+    <h2>🍷 Beber em breve</h2>
+    <div id="alertas"></div>
+  </div>
+
+  <!-- Busca + filtros -->
+  <div class="filtros">
+    <input id="busca" type="search" placeholder="Buscar por nome, produtor, uva…" />
+    <div class="filtros-linha">
+      <select id="filtro-estado">
+        <option value="">Todos os estados</option>
+        <option value="beber_ja">Beber em breve</option>
+        <option value="passou">Passou do ponto</option>
+        <option value="otima">Na janela ótima</option>
+        <option value="guarda">Em guarda</option>
+        <option value="sem_janela">Sem janela</option>
+      </select>
+      <select id="filtro-tipo">
+        <option value="">Tinto e branco</option>
+        <option value="tinto">Tinto</option>
+        <option value="branco">Branco</option>
+      </select>
+      <select id="filtro-porta">
+        <option value="">Todas as portas</option>
+        <option value="1">Porta 1 (tinto)</option>
+        <option value="2">Porta 2 (tinto)</option>
+        <option value="3">Porta 3 (branco)</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="lista" class="lista"></div>
+</section>
+
+<!-- ===================== TELA: ADICIONAR / EDITAR ===================== -->
+<section id="tela-form" class="tela">
+  <header class="cabecalho">
+    <button class="link" data-ir="tela-inicio">‹ Voltar</button>
+    <h1 id="form-titulo">Novo vinho</h1>
+  </header>
+
+  <form id="form" class="form" autocomplete="off">
+    <input type="hidden" id="f-id" />
+
+    <!-- Foto + IA -->
+    <div class="cartao">
+      <label class="foto-area">
+        <input id="f-foto" type="file" accept="image/*" capture="environment" hidden />
+        <img id="f-foto-preview" alt="" />
+        <span id="f-foto-texto">📷 Tirar foto do rótulo</span>
+      </label>
+      <button type="button" id="btn-ia" class="btn-ia">✨ Buscar dados (IA)</button>
+      <p id="ia-status" class="ia-status"></p>
+    </div>
+
+    <!-- Identificação -->
+    <fieldset class="cartao">
+      <legend>Identificação</legend>
+      <label>Nome <input id="f-nome" type="text" /></label>
+      <label>Produtor <input id="f-produtor" type="text" /></label>
+      <div class="dois">
+        <label>Região <input id="f-regiao" type="text" /></label>
+        <label>País <input id="f-pais" type="text" /></label>
+      </div>
+      <label>Uva(s) <input id="f-uvas" type="text" placeholder="separe por vírgula" /></label>
+      <div class="dois">
+        <label>Safra <input id="f-safra" type="number" inputmode="numeric" /></label>
+        <label>Tipo / temperatura
+          <select id="f-tipo">
+            <option value="tinto">Tinto (Porta 1 ou 2)</option>
+            <option value="branco">Branco (Porta 3)</option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Formato e quantidade -->
+    <fieldset class="cartao">
+      <legend>Formato e quantidade</legend>
+      <div class="dois">
+        <label>Formato
+          <select id="f-formato">
+            <option value="750ml">750ml</option>
+            <option value="magnum">Magnum (1,5L)</option>
+            <option value="outro">Outro</option>
+          </select>
+        </label>
+        <label>Garrafas <input id="f-quantidade" type="number" inputmode="numeric" value="1" min="0" /></label>
+      </div>
+      <label id="campo-formato-outro" class="oculto">Qual formato? <input id="f-formato-outro" type="text" /></label>
+      <p class="dica">Magnum envelhece mais devagar — o app empurra a janela para mais tarde.</p>
+    </fieldset>
+
+    <!-- Preço (com marca de confiança) -->
+    <fieldset class="cartao">
+      <legend>Preço</legend>
+      <div class="tres">
+        <label>Moeda <input id="f-preco-moeda" type="text" value="R$" /></label>
+        <label>De <input id="f-preco-min" type="number" inputmode="decimal" /></label>
+        <label>Até <input id="f-preco-max" type="number" inputmode="decimal" /></label>
+      </div>
+      <label>Origem do dado
+        <select id="f-preco-origem" class="sel-origem">
+          <option value="vazio">— não encontrado —</option>
+          <option value="fonte">✓ confirmado por fonte</option>
+          <option value="estimativa">~ estimativa</option>
+          <option value="manual">✎ preenchido por mim</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <!-- Janela de consumo (faixa de anos) -->
+    <fieldset class="cartao">
+      <legend>Janela de consumo (faixa de anos)</legend>
+      <div class="dois">
+        <label>De (ano) <input id="f-janela-inicio" type="number" inputmode="numeric" /></label>
+        <label>Até (ano) <input id="f-janela-fim" type="number" inputmode="numeric" /></label>
+      </div>
+      <label>Origem do dado
+        <select id="f-janela-origem" class="sel-origem">
+          <option value="vazio">— não encontrado —</option>
+          <option value="fonte">✓ confirmado por fonte</option>
+          <option value="estimativa">~ estimativa</option>
+          <option value="manual">✎ preenchido por mim</option>
+        </select>
+      </label>
+      <p class="dica">A janela é incerta: pense sempre em faixa, nunca data cravada.</p>
+    </fieldset>
+
+    <!-- Posição física -->
+    <fieldset class="cartao">
+      <legend>Posição física</legend>
+      <div id="zona-sugerida" class="zona-sugerida"></div>
+      <div class="dois">
+        <label>Porta <select id="f-porta"></select></label>
+        <label>Nível <select id="f-nivel"></select></label>
+      </div>
+      <label id="campo-posicao-num" class="oculto">Posição (número) <input id="f-posicao-num" type="number" inputmode="numeric" /></label>
+      <label>Nota de posição <input id="f-posicao-nota" type="text" placeholder="ex.: caixa OWC de 6" /></label>
+    </fieldset>
+
+    <!-- Display + notas -->
+    <fieldset class="cartao">
+      <label class="checkbox"><input id="f-display" type="checkbox" /> Rótulo de display (merece estar à vista)</label>
+      <label>Notas pessoais <textarea id="f-notas" rows="3"></textarea></label>
+    </fieldset>
+
+    <div id="divergencias-form" class="divergencias"></div>
+
+    <div class="form-acoes">
+      <button type="submit" class="btn-principal">Salvar vinho</button>
+      <button type="button" id="btn-excluir" class="btn-perigo oculto">Excluir</button>
+    </div>
+  </form>
+</section>
+
+<!-- ===================== TELA: DETALHE ===================== -->
+<section id="tela-detalhe" class="tela">
+  <header class="cabecalho">
+    <button class="link" data-ir="tela-inicio">‹ Voltar</button>
+    <h1>Detalhe</h1>
+  </header>
+  <div id="detalhe" class="detalhe"></div>
+</section>
+
+<!-- ===================== TELA: AJUSTES ===================== -->
+<section id="tela-ajustes" class="tela">
+  <header class="cabecalho">
+    <button class="link" data-ir="tela-inicio">‹ Voltar</button>
+    <h1>Ajustes</h1>
+  </header>
+
+  <fieldset class="cartao">
+    <legend>Inteligência (IA)</legend>
+    <label>Provedor
+      <select id="cfg-provedor">
+        <option value="anthropic">Anthropic (Claude)</option>
+        <option value="openai">OpenAI</option>
+      </select>
+    </label>
+    <label>Chave de API <input id="cfg-apikey" type="password" placeholder="cole aqui sua chave" /></label>
+    <label>Modelo <input id="cfg-modelo" type="text" /></label>
+    <p class="dica">A chave fica só neste aparelho, nunca sai dele exceto para chamar a API que você escolheu.</p>
+    <button type="button" id="btn-salvar-ia" class="btn-principal">Salvar configuração</button>
+  </fieldset>
+
+  <fieldset class="cartao">
+    <legend>Capacidade das zonas</legend>
+    <p class="dica">Valores oficiais EDR como ponto de partida (145 tinto + 59 branco). Ajuste à sua adega.</p>
+    <div id="cfg-capacidades" class="capacidades"></div>
+    <button type="button" id="btn-salvar-cap" class="btn-principal">Salvar capacidades</button>
+  </fieldset>
+
+  <fieldset class="cartao">
+    <legend>Backup</legend>
+    <p class="dica">Exporte para guardar uma cópia; importe para restaurar ou migrar de aparelho.</p>
+    <button type="button" id="btn-exportar" class="btn-secundario">⬇️ Exportar catálogo (JSON)</button>
+    <label class="btn-secundario arquivo-label">⬆️ Importar catálogo (JSON)
+      <input id="btn-importar" type="file" accept="application/json,.json" hidden />
+    </label>
+  </fieldset>
+</section>
+
+<!-- ===================== BARRA INFERIOR ===================== -->
+<nav class="barra">
+  <button data-ir="tela-inicio" class="ativo">🏠<span>Início</span></button>
+  <button id="nav-adicionar">➕<span>Adicionar</span></button>
+  <button data-ir="tela-ajustes">⚙️<span>Ajustes</span></button>
+</nav>
+
+<!-- Os scripts entram em ordem: dados → lógica → IA → app que junta tudo -->
+<script src="./db.js"></script>
+<script src="./logic.js"></script>
+<script src="./ai.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

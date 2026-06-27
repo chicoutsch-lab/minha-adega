@@ -1,0 +1,169 @@
+/*
+  styles.css — a aparência do app.
+  Paleta de vinho, fundo escuro e quente, texto grande e legível no celular.
+  As "variáveis" (--cor-…) ficam no topo: mude uma e ela vale no app todo.
+*/
+:root {
+  --fundo: #2a0e17;
+  --cartao: #3a1722;
+  --cartao-2: #47202c;
+  --texto: #f3e9d2;
+  --texto-fraco: #c9b6a8;
+  --vinho: #8c1e32;
+  --vinho-claro: #b0394c;
+  --linha: #5a3340;
+
+  --ok: #4f9d69;        /* confirmado por fonte (verde) */
+  --estimativa: #d99a3a; /* estimativa (âmbar) */
+  --alerta: #e0613a;    /* urgência / passou do ponto */
+  --vazio: #8a7a70;     /* não encontrado (cinza) */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  background: var(--fundo);
+  color: var(--texto);
+  /* Deixa espaço para a barra inferior + borda do iPhone */
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  -webkit-text-size-adjust: 100%;
+}
+
+h1 { font-size: 1.4rem; margin: 0; }
+h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+
+/* —— Telas: só uma aparece por vez —— */
+.tela { display: none; padding: 0 1rem 1rem; }
+.tela.ativa { display: block; }
+
+.cabecalho {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--fundo);
+  padding: calc(env(safe-area-inset-top) + .6rem) 0 .6rem;
+  display: flex; align-items: center; gap: .6rem;
+  border-bottom: 1px solid var(--linha);
+}
+.contador { margin-left: auto; color: var(--texto-fraco); font-size: .85rem; }
+.link { background: none; border: none; color: var(--vinho-claro); font-size: 1rem; padding: 0; }
+
+/* —— Seção "Beber em breve" (destaque máximo) —— */
+.bloco-alertas {
+  background: linear-gradient(160deg, #5a1626, #3a1722);
+  border: 1px solid var(--vinho);
+  border-radius: 16px;
+  padding: 1rem; margin: 1rem 0;
+}
+.bloco-alertas.vazio { opacity: .7; }
+.alerta-item {
+  display: flex; align-items: center; gap: .6rem;
+  background: rgba(0,0,0,.2); border-radius: 12px;
+  padding: .6rem .8rem; margin-top: .5rem;
+  border-left: 4px solid var(--alerta);
+}
+.alerta-item .titulo { font-weight: 600; }
+.alerta-item .sub { font-size: .8rem; color: var(--texto-fraco); }
+
+/* —— Filtros —— */
+.filtros { margin: 1rem 0; display: grid; gap: .5rem; }
+.filtros-linha { display: flex; gap: .5rem; }
+.filtros-linha select { flex: 1; }
+input, select, textarea {
+  width: 100%; padding: .6rem .7rem;
+  background: var(--cartao); color: var(--texto);
+  border: 1px solid var(--linha); border-radius: 10px;
+  font-size: 1rem;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--vinho-claro); }
+
+/* —— Lista de vinhos —— */
+.lista { display: grid; gap: .6rem; }
+.cartao-vinho {
+  background: var(--cartao); border-radius: 14px; padding: .8rem;
+  display: flex; gap: .7rem; align-items: center;
+  border: 1px solid var(--linha);
+}
+.cartao-vinho img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--cartao-2); }
+.cartao-vinho .nome { font-weight: 600; }
+.cartao-vinho .meta { font-size: .8rem; color: var(--texto-fraco); }
+.cartao-vinho .qtd { margin-left: auto; color: var(--texto-fraco); font-size: .85rem; text-align: right; }
+
+/* Etiquetas de estado de consumo */
+.tag { display: inline-block; font-size: .72rem; padding: .12rem .5rem; border-radius: 999px; font-weight: 600; }
+.tag.guarda { background: #2f4858; color: #cfe6f2; }
+.tag.otima { background: #2f5a3a; color: #d5f2db; }
+.tag.beber_ja { background: #7a3a1a; color: #ffd9c2; }
+.tag.passou { background: var(--alerta); color: #fff; }
+.tag.sem_janela { background: #4a4036; color: #e4d6c8; }
+
+/* —— Formulário —— */
+.form { display: grid; gap: 1rem; margin-top: 1rem; }
+.cartao, fieldset.cartao {
+  background: var(--cartao); border: 1px solid var(--linha);
+  border-radius: 14px; padding: 1rem; display: grid; gap: .7rem; margin: 0;
+}
+legend { padding: 0 .4rem; color: var(--vinho-claro); font-weight: 600; }
+.form label { display: grid; gap: .3rem; font-size: .85rem; color: var(--texto-fraco); }
+.form label input, .form label select, .form label textarea { color: var(--texto); }
+.dois { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.tres { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .5rem; }
+.checkbox { display: flex; flex-direction: row; align-items: center; gap: .5rem; }
+.checkbox input { width: auto; }
+.oculto { display: none !important; }
+.dica { font-size: .78rem; color: var(--texto-fraco); margin: 0; }
+
+/* Marca de origem dos dados (cor por confiança) */
+.sel-origem { font-weight: 600; }
+.badge { display: inline-block; font-size: .72rem; padding: .12rem .5rem; border-radius: 6px; }
+.badge.fonte { background: var(--ok); color: #04210f; }
+.badge.estimativa { background: var(--estimativa); color: #2a1800; }
+.badge.manual { background: #5a4a8a; color: #fff; }
+.badge.vazio { background: var(--vazio); color: #1a1410; }
+
+/* Foto */
+.foto-area { display: grid; place-items: center; gap: .4rem; cursor: pointer; }
+.foto-area img { max-height: 160px; border-radius: 10px; display: none; }
+.foto-area img[src] { display: block; }
+.btn-ia { background: var(--vinho); color: #fff; border: none; padding: .7rem; border-radius: 10px; font-size: 1rem; font-weight: 600; }
+.ia-status { font-size: .82rem; color: var(--texto-fraco); margin: 0; min-height: 1em; }
+
+/* Zona sugerida e divergências */
+.zona-sugerida { background: var(--cartao-2); border-radius: 10px; padding: .6rem .7rem; font-size: .85rem; }
+.zona-sugerida b { color: var(--vinho-claro); }
+.divergencias { display: grid; gap: .5rem; }
+.diverg { padding: .6rem .7rem; border-radius: 10px; font-size: .85rem; border-left: 4px solid var(--estimativa); background: rgba(217,154,58,.12); }
+.diverg.alta { border-left-color: var(--alerta); background: rgba(224,97,58,.14); }
+
+/* Botões */
+.form-acoes { display: grid; gap: .6rem; }
+.btn-principal { background: var(--vinho); color: #fff; border: none; padding: .85rem; border-radius: 12px; font-size: 1.05rem; font-weight: 600; }
+.btn-secundario { background: var(--cartao-2); color: var(--texto); border: 1px solid var(--linha); padding: .8rem; border-radius: 12px; font-size: 1rem; text-align: center; display: block; }
+.btn-perigo { background: none; color: var(--alerta); border: 1px solid var(--alerta); padding: .75rem; border-radius: 12px; font-size: 1rem; }
+.arquivo-label { cursor: pointer; }
+.capacidades { display: grid; gap: .5rem; }
+.cap-linha { display: grid; grid-template-columns: 1fr 80px; align-items: center; gap: .5rem; font-size: .82rem; }
+
+/* —— Detalhe —— */
+.detalhe { margin-top: 1rem; display: grid; gap: 1rem; }
+.detalhe .foto-grande { width: 100%; max-height: 280px; object-fit: contain; border-radius: 14px; background: var(--cartao); }
+.detalhe .linha-dado { display: flex; justify-content: space-between; gap: 1rem; padding: .45rem 0; border-bottom: 1px solid var(--linha); }
+.detalhe .rotulo { color: var(--texto-fraco); font-size: .85rem; }
+.detalhe .valor { text-align: right; }
+.detalhe .acoes { display: grid; gap: .6rem; }
+
+/* —— Barra inferior —— */
+.barra {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+  display: flex; justify-content: space-around;
+  background: var(--cartao); border-top: 1px solid var(--linha);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.barra button {
+  flex: 1; background: none; border: none; color: var(--texto-fraco);
+  padding: .5rem; font-size: 1.3rem; display: grid; place-items: center; gap: .1rem;
+}
+.barra button span { font-size: .68rem; }
+.barra button.ativo { color: var(--vinho-claro); }
+
+.vazio-msg { color: var(--texto-fraco); text-align: center; padding: 1.5rem 1rem; font-size: .9rem; }
