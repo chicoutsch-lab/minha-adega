@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v26";
+const APP_VERSION = "v27";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -1015,9 +1015,10 @@ $("#btn-importar").addEventListener("change", async (e) => {
     const dados = JSON.parse(texto);
     const vinhos = Array.isArray(dados) ? dados : dados.vinhos;
     if (!Array.isArray(vinhos)) throw new Error("Arquivo sem lista de vinhos.");
-    if (!confirm(`Importar ${vinhos.length} vinho(s)? Isso substitui o catálogo atual.`)) return;
+    const atuais = (await DB.todos()).length;
+    if (!confirm(`Importar ${vinhos.length} vinho(s)?\n\nSeus ${atuais} vinho(s) atuais serão SUBSTITUÍDOS (guardo um backup automático antes).`)) return;
     await DB.substituirTudo(vinhos);
-    alert("Catálogo importado.");
+    alert("Catálogo importado. (Backup do anterior guardado.)");
     irPara("tela-inicio");
   } catch (err) {
     alert("Não consegui importar: " + err.message);
@@ -1035,16 +1036,31 @@ $("#btn-carregar-publicado").addEventListener("click", async () => {
     const dados = await r.json();
     const vinhos = Array.isArray(dados) ? dados : dados.vinhos;
     if (!Array.isArray(vinhos)) throw new Error("Arquivo sem lista de vinhos.");
-    if (!confirm(`Carregar ${vinhos.length} vinho(s) do catálogo publicado? Isso substitui o catálogo atual deste aparelho.`)) {
+    const atuais = (await DB.todos()).length;
+    if (!confirm(`Carregar ${vinhos.length} vinho(s) do catálogo publicado?\n\nSeus ${atuais} deste aparelho serão SUBSTITUÍDOS (guardo um backup automático antes).`)) {
       status.textContent = "";
       return;
     }
     await DB.substituirTudo(vinhos);
-    status.textContent = `✓ ${vinhos.length} vinhos carregados.`;
+    status.textContent = `✓ ${vinhos.length} vinhos carregados. (Backup do anterior guardado.)`;
     irPara("tela-inicio");
   } catch (err) {
     status.textContent = "❌ " + err.message;
   }
+});
+
+// —— Restaurar o último backup automático ——
+$("#btn-restaurar-backup").addEventListener("click", async () => {
+  const bk = await DB.lerConfig("backup_auto");
+  if (!bk || !bk.vinhos || !bk.vinhos.length) {
+    alert("Ainda não há backup automático. Ele é criado sempre que você importa ou carrega o catálogo publicado.");
+    return;
+  }
+  const quando = new Date(bk.em).toLocaleString("pt-BR");
+  if (!confirm(`Restaurar o backup de ${bk.vinhos.length} vinho(s)?\n(salvo em ${quando})\n\nO catálogo atual será substituído — e também guardado num novo backup antes.`)) return;
+  await DB.substituirTudo(bk.vinhos);
+  alert("Backup restaurado.");
+  irPara("tela-inicio");
 });
 
 // ————— Apoios de texto —————

@@ -62,9 +62,16 @@ const DB = (() => {
     salvarConfig: (chave, valor) =>
       tx("config", "readwrite", (s) => s.put({ chave, valor })),
 
-    // Usado pela função IMPORTAR: troca todo o catálogo de uma vez.
+    // Usado por IMPORTAR / CARREGAR PUBLICADO: troca todo o catálogo de uma vez.
+    // Antes de apagar, guarda o estado atual num backup automático (rede de segurança).
     async substituirTudo(vinhos) {
       const db = await abrir();
+      const atuais = await tx("vinhos", "readonly", (s) => s.getAll());
+      if (atuais && atuais.length) {
+        await tx("config", "readwrite", (s) =>
+          s.put({ chave: "backup_auto", valor: { em: new Date().toISOString(), vinhos: atuais } })
+        );
+      }
       return new Promise((ok, erro) => {
         const t = db.transaction("vinhos", "readwrite");
         const s = t.objectStore("vinhos");
