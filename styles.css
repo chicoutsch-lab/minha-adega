@@ -250,3 +250,42 @@ small.dica { display: block; margin-top: .25rem; }
   color: var(--texto); border-radius: 12px; padding: .7rem .8rem;
   font-size: .85rem; margin-bottom: .2rem;
 }
+
+/* —— Visão geral da adega (topo da Home) —— */
+.visao-geral { margin: .2rem 0 .6rem; }
+.vg-topo {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .6rem; background: var(--cartao); border: 1px solid var(--linha);
+  border-radius: 14px; padding: .7rem .9rem;
+}
+.vg-grande { display: flex; flex-direction: column; line-height: 1.1; }
+.vg-grande b { font-size: 1.9rem; color: var(--vinho-claro); }
+.vg-grande span { font-size: .8rem; color: var(--texto-fraco); }
+.vg-tipos { display: flex; gap: .9rem; font-size: 1rem; font-weight: 600; }
+.vg-tipos span { white-space: nowrap; }
+.vg-cards { display: flex; gap: .5rem; margin-top: .5rem; }
+.vg-card {
+  flex: 1; background: var(--cartao); border: 1px solid var(--linha);
+  border-radius: 12px; padding: .55rem .7rem; display: flex; flex-direction: column;
+}
+.vg-card b { font-size: 1.2rem; }
+.vg-card span { font-size: .75rem; color: var(--texto-fraco); }
+.vg-card.clicavel { cursor: pointer; border-color: var(--vinho); }
+.vg-card.clicavel:active { background: var(--cartao-2); }
+
+/* —— Mini-mapa 2D na Home —— */
+.mini-mapa {
+  display: flex; gap: .5rem; align-items: flex-end; cursor: pointer;
+  background: var(--cartao); border: 1px solid var(--linha);
+  border-radius: 14px; padding: .7rem; margin-bottom: .6rem;
+}
+.mm-porta { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .35rem; }
+.mm-barra {
+  width: 100%; height: 64px; background: var(--fundo);
+  border: 1px solid var(--linha); border-radius: 8px;
+  display: flex; align-items: flex-end; overflow: hidden;
+}
+.mm-cheio { width: 100%; background: var(--vinho); transition: height .3s; }
+.mm-porta.branco .mm-cheio { background: #c9b06a; }
+.mm-rotulo { font-size: .72rem; text-align: center; color: var(--texto-fraco); line-height: 1.2; }
+.mm-rotulo b { color: var(--texto); font-size: .95rem; }

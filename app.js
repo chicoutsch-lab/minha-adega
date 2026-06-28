@@ -39,6 +39,93 @@ function montarSelecaoPosicao() {
 }
 
 // ===================================================================
+//  VISÃO GERAL DA ADEGA (topo da Home)
+// ===================================================================
+const ANO_AGORA = new Date().getFullYear();
+
+// Classifica de forma "ampla": tinto / branco / fortificado / rosé.
+// (No banco o tipo é só tinto/branco; aqui detectamos Porto e rosé pelo nome/notas.)
+function tipoAmplo(v) {
+  const t = ((v.nome || "") + " " + (v.notas || "")).toLowerCase();
+  if (/porto|tawny|licoroso|fortific|madeira|jerez/.test(t)) return "fortificado";
+  if (/\bros[eé]\b/.test(t)) return "rosé";
+  return v.tipo; // "tinto" ou "branco"
+}
+
+// Valor estimado de um vinho = preço médio × quantidade.
+function valorVinho(v) {
+  const p = v.preco || {};
+  const lo = Number(p.min) || 0, hi = Number(p.max) || 0;
+  const mid = lo && hi ? (lo + hi) / 2 : hi || lo;
+  return mid * (v.quantidade || 0);
+}
+
+const moedaBR = (n) => "R$ " + Math.round(n).toLocaleString("pt-BR");
+
+function renderVisaoGeral(vinhos) {
+  const garrafas = vinhos.reduce((s, v) => s + (v.quantidade || 0), 0);
+  let tintos = 0, brancos = 0, outros = 0;
+  for (const v of vinhos) {
+    const q = v.quantidade || 0;
+    const t = tipoAmplo(v);
+    if (t === "tinto") tintos += q;
+    else if (t === "branco") brancos += q;
+    else outros += q;
+  }
+  const valor = vinhos.reduce((s, v) => s + valorVinho(v), 0);
+  // "Beber em 12 meses": a janela termina até o ano que vem.
+  const beber12 = vinhos.filter((v) => v.janelaFim && v.janelaFim <= ANO_AGORA + 1).length;
+
+  $("#visao-geral").innerHTML = `
+    <div class="vg-topo">
+      <div class="vg-grande"><b>${garrafas}</b><span>garrafas na adega</span></div>
+      <div class="vg-tipos">
+        <span title="Tintos">🍷 ${tintos}</span>
+        <span title="Brancos">🥂 ${brancos}</span>
+        <span title="Outros (Porto, rosé)">🌸 ${outros}</span>
+      </div>
+    </div>
+    <div class="vg-cards">
+      <div class="vg-card"><b>${moedaBR(valor)}</b><span>valor na adega</span></div>
+      <div class="vg-card clicavel" id="vg-beber"><b>⏳ ${beber12}</b><span>beber em 12 meses ›</span></div>
+    </div>`;
+
+  const btnBeber = $("#vg-beber");
+  if (btnBeber)
+    btnBeber.onclick = () => {
+      $("#filtro-estado").value = "beber_ja";
+      aplicarFiltros(vinhos);
+      $("#lista").scrollIntoView({ behavior: "smooth" });
+    };
+
+  renderMiniMapa(vinhos);
+}
+
+// Mini-mapa 2D: as 3 portas com o nível de ocupação. Toque abre o mapa completo.
+function renderMiniMapa(vinhos) {
+  const cap = { 1: 120, 2: 120, 3: 59 }; // capacidade aproximada por porta
+  const portas = [
+    { p: 1, nome: "Porta 1", classe: "tinto" },
+    { p: 2, nome: "Porta 2", classe: "tinto" },
+    { p: 3, nome: "Porta 3", classe: "branco" },
+  ];
+  $("#mini-mapa").innerHTML = portas
+    .map(({ p, nome, classe }) => {
+      const g = vinhos
+        .filter((v) => Number(v.posicao?.porta) === p)
+        .reduce((s, v) => s + (v.quantidade || 0), 0);
+      const pct = Math.min(100, Math.round((g / cap[p]) * 100));
+      return `
+      <div class="mm-porta ${classe}">
+        <div class="mm-barra"><div class="mm-cheio" style="height:${pct}%"></div></div>
+        <div class="mm-rotulo">${nome}<br><b>${g}</b> 🍾</div>
+      </div>`;
+    })
+    .join("");
+  $("#mini-mapa").onclick = () => irPara("tela-mapa");
+}
+
+// ===================================================================
 //  TELA INÍCIO — alertas + lista
 // ===================================================================
 async function renderInicio() {
@@ -47,6 +134,7 @@ async function renderInicio() {
   $("#contador").textContent = `${vinhos.length} vinho(s)`;
   const nDesejos = todos.filter((v) => v.desejo).length;
   $("#desejos-contador").textContent = nDesejos ? `(${nDesejos})` : "";
+  renderVisaoGeral(vinhos);
 
   // —— Seção "Beber em breve": só os urgentes, ordenados por urgência ——
   const urgentes = vinhos
