@@ -225,14 +225,22 @@
     <h1>Mapa da adega</h1>
   </header>
 
+  <div class="mapa-toggle">
+    <button id="mapa-modo-2d" class="ativo">🗺️ Mapa 2D</button>
+    <button id="mapa-modo-3d">🧊 3D</button>
+  </div>
+
   <div class="mapa-legenda">
     <span class="chip-tinto">Tinto · Portas 1-2</span>
     <span class="chip-branco">Branco · Porta 3</span>
-    <span class="dica">← deslize para ver as portas →</span>
+    <span class="dica" id="mapa-dica-2d">← deslize para ver as portas →</span>
   </div>
 
-  <!-- 3 portas lado a lado, deslizáveis -->
+  <!-- 3 portas lado a lado, deslizáveis (2D) -->
   <div id="mapa-scroll" class="mapa-scroll"></div>
+
+  <!-- adega 3D navegável (girar/zoom) -->
+  <div id="mapa3d" class="mapa3d oculto"></div>
 
   <h2 id="mapa-lista-titulo" class="mapa-lista-titulo"></h2>
   <div id="mapa-lista" class="lista"></div>
@@ -285,10 +293,12 @@
   <button data-ir="tela-ajustes">⚙️<span>Ajustes</span></button>
 </nav>
 
-<!-- Os scripts entram em ordem: dados → lógica → IA → app que junta tudo -->
+<!-- Os scripts entram em ordem: dados → lógica → IA → 3D → app que junta tudo -->
 <script src="./db.js"></script>
 <script src="./logic.js"></script>
 <script src="./ai.js"></script>
+<script src="./vendor/three.min.js"></script>
+<script src="./mapa3d.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>

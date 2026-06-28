@@ -7,7 +7,7 @@
   Sempre que você ALTERAR o código do app, suba o número da versão abaixo
   (CACHE) para o aparelho buscar os arquivos novos.
 */
-const CACHE = "adega-v5";
+const CACHE = "adega-v6";
 const ARQUIVOS = [
   "./",
   "./index.html",
@@ -15,6 +15,8 @@ const ARQUIVOS = [
   "./db.js",
   "./logic.js",
   "./ai.js",
+  "./vendor/three.min.js",
+  "./mapa3d.js",
   "./app.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",

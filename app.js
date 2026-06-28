@@ -772,12 +772,8 @@ async function renderMapa() {
   $("#mapa-lista").innerHTML = `<p class="dica">Toque numa vaga ou zona para ver os vinhos que estão lá.</p>`;
 }
 
-// Toque numa vaga/zona → lista os vinhos daquele endereço.
-$("#mapa-scroll").addEventListener("click", async (e) => {
-  const el = e.target.closest("[data-zona]");
-  if (!el) return;
-  const zona = el.dataset.zona;
-  const pos = el.dataset.pos ? Number(el.dataset.pos) : null;
+// Lista os vinhos de um endereço (usada pelo 2D e pelo 3D).
+async function mostrarVinhosDoEndereco(zona, pos) {
   const vinhos = (await DB.todos()).filter((v) => {
     const p = v.posicao || {};
     if (`P${p.porta}-${p.nivel}` !== zona) return false;
@@ -799,6 +795,13 @@ $("#mapa-scroll").addEventListener("click", async (e) => {
         </div>
       </div>`)
     .join("");
+}
+
+// Toque numa vaga/zona (2D) → lista os vinhos.
+$("#mapa-scroll").addEventListener("click", (e) => {
+  const el = e.target.closest("[data-zona]");
+  if (!el) return;
+  mostrarVinhosDoEndereco(el.dataset.zona, el.dataset.pos ? Number(el.dataset.pos) : null);
 });
 
 // Abrir o detalhe ao tocar num vinho da lista do mapa.
@@ -807,7 +810,55 @@ $("#mapa-lista").addEventListener("click", (e) => {
   if (card) abrirDetalhe(card.dataset.id);
 });
 
-$("#nav-mapa").addEventListener("click", renderMapa);
+// Monta o "modelo" da adega (portas → níveis → vagas) para o 3D.
+async function modeloMapa() {
+  const vinhos = await DB.todos();
+  const cap = (await DB.lerConfig("capacidades")) || capacidadesPadrao();
+  const zonaSoma = {}, slotVinho = {};
+  for (const v of vinhos) {
+    const p = v.posicao || {};
+    if (!p.porta || !p.nivel) continue;
+    const z = `P${p.porta}-${p.nivel}`;
+    zonaSoma[z] = (zonaSoma[z] || 0) + (v.quantidade || 0);
+    if (p.posicaoNum) slotVinho[`${z}-${p.posicaoNum}`] = v;
+  }
+  return PORTAS.map((p) => ({
+    porta: p.porta,
+    tipo: p.tipo,
+    niveis: NIVEIS.map((n) => {
+      const z = `P${p.porta}-${n.nivel}`;
+      const c = cap[z] || 0;
+      const slots = n.endereco === "posicional"
+        ? Array.from({ length: c }, (_, i) => ({ pos: i + 1, vinho: slotVinho[`${z}-${i + 1}`] || null }))
+        : [];
+      return { nivel: n.nivel, nome: n.nome, endereco: n.endereco, cap: c, ocup: zonaSoma[z] || 0, slots };
+    }),
+  }));
+}
+
+// Constrói (ou reconstrói) a adega 3D.
+async function renderMapa3D() {
+  const modelo = await modeloMapa();
+  Mapa3D.montar($("#mapa3d"), modelo, mostrarVinhosDoEndereco, 440);
+  $("#mapa-lista-titulo").textContent = "";
+  $("#mapa-lista").innerHTML = `<p class="dica">Arraste para girar · pinça/roda para zoom · toque numa garrafa ou zona.</p>`;
+}
+
+// Alterna entre 2D e 3D.
+function setModoMapa(modo) {
+  const tri = modo === "3d";
+  $("#mapa-modo-2d").classList.toggle("ativo", !tri);
+  $("#mapa-modo-3d").classList.toggle("ativo", tri);
+  $("#mapa-scroll").classList.toggle("oculto", tri);
+  $("#mapa3d").classList.toggle("oculto", !tri);
+  $("#mapa-dica-2d").style.visibility = tri ? "hidden" : "visible";
+  if (tri) { renderMapa3D(); } else { Mapa3D.desmontar(); }
+}
+$("#mapa-modo-2d").addEventListener("click", () => setModoMapa("2d"));
+$("#mapa-modo-3d").addEventListener("click", () => setModoMapa("3d"));
+
+// Abrir a aba Mapa sempre começa no 2D (leve), com o 3D a um toque.
+$("#nav-mapa").addEventListener("click", () => { Mapa3D.desmontar(); setModoMapa("2d"); renderMapa(); });
 
 // ————— Início de tudo —————
 montarSelecaoPosicao();
