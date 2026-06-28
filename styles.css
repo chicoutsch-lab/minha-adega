@@ -243,6 +243,7 @@ small.dica { display: block; margin-top: .25rem; }
 .tag.rascunho { background: #7a5a1a; color: #ffe9c2; }
 .tag.nota { background: #caa53a; color: #2a1d05; font-weight: 600; }
 .tag.decantar { background: #6b3fa0; color: #fff; font-weight: 600; }
+.tag.taca { background: #6e2a3a; color: #ffd9e0; font-weight: 600; }
 .banner-decanter { background: rgba(107,63,160,.18); border: 1px solid #6b3fa0; border-radius: 12px; padding: .6rem .8rem; margin: .2rem 0 .5rem; font-size: .92rem; }
 .banner-rascunho {
   background: rgba(217,154,58,.16); border: 1px solid var(--estimativa);

@@ -129,6 +129,7 @@ function aplicarFiltros(vinhos) {
           <div class="meta">${esc(v.produtor) || "—"} · ${formatarEndereco(v.posicao)}</div>
           ${tagEstado}
           ${tagDecanter(v)}
+          ${tagTaca(v)}
           ${v.display ? '<span class="tag otima">★ display</span>' : ""}
           ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos}</span>` : ""; })()}
         </div>
@@ -215,6 +216,7 @@ function preencherForm(v) {
   $("#f-premiacoes").value = premiacoesParaTexto(v.premiacoes);
   $("#f-corpo").value = v.corpo || "";
   $("#f-temp-servico").value = v.tempServico || "";
+  $("#f-taca").value = v.taca || "";
   $("#f-harmonizacao").value = v.harmonizacao || "";
   $("#f-notas").value = v.notas || "";
   atualizarModoDesejo();
@@ -268,6 +270,7 @@ function lerForm() {
     desejo: $("#f-desejo").checked,
     corpo: $("#f-corpo").value,
     tempServico: $("#f-temp-servico").value.trim(),
+    taca: $("#f-taca").value,
     harmonizacao: $("#f-harmonizacao").value.trim(),
     notas: $("#f-notas").value.trim(),
     fotoDataURL: fotoAtual.dataURL,
@@ -610,6 +613,7 @@ async function abrirDetalhe(id) {
       ${linha("Tipo / formato", `${v.tipo} · ${v.formato}${v.formato === "outro" ? " (" + esc(v.formatoOutro) + ")" : ""}`)}
       ${v.corpo ? linha("Corpo", `<b>${esc(v.corpo)}</b>`) : ""}
       ${v.tempServico ? linha("🌡️ Servir", esc(v.tempServico)) : ""}
+      ${v.taca ? linha("🍷 Taça", tacaTexto(v)) : ""}
       ${linha("Garrafas", v.quantidade ?? 0)}
       ${(v.premiacoes && v.premiacoes.length) ? linha("Premiações", premiacoesTexto(v.premiacoes)) : ""}
       ${linha("Preço", precoTexto(v.preco))}
@@ -765,6 +769,17 @@ function minDecant(v) {
 function tagDecanter(v) {
   const min = minDecant(v);
   return min ? `<span class="tag decantar">🫗 ${min}min</span>` : "";
+}
+
+// Taça: selo só para Borgonha (o caso que importa); texto explicativo no detalhe.
+function tagTaca(v) {
+  return v.taca === "Borgonha" ? `<span class="tag taca">🍷 Borgonha</span>` : "";
+}
+function tacaTexto(v) {
+  if (v.taca === "Borgonha") return "Borgonha — bojo largo, realça aromas delicados (Pinot/Nebbiolo)";
+  if (v.taca === "Bordeaux") return "Bordeaux — bojo alto, para tintos encorpados";
+  if (v.taca === "Branco") return "Branco — taça menor e mais fechada";
+  return v.taca ? esc(v.taca) : "—";
 }
 
 // —— Premiações (notas de críticos) ——
@@ -1020,7 +1035,7 @@ function montarRascunho(res, dataURL) {
     preco: { min: null, max: null, moeda: "R$", origem: "vazio" },
     janelaInicio: null, janelaFim: null, janelaOrigem: "vazio", janelaBase: "",
     posicao: { porta: 1, nivel: "N1", posicaoNum: null, posicaoNota: "" },
-    display: false, desejo: false, premiacoes: [], corpo: "", tempServico: "", harmonizacao: "", notas: res.observacao || "",
+    display: false, desejo: false, premiacoes: [], corpo: "", tempServico: "", taca: "", harmonizacao: "", notas: res.observacao || "",
     fotoDataURL: dataURL, editadoEm: new Date().toISOString(),
   };
 }
