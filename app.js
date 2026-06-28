@@ -711,6 +711,104 @@ function montarRascunho(res, dataURL) {
   };
 }
 
+// ===================================================================
+//  TELA MAPA — adega virtual deslizável, com cada vaga nomeada
+// ===================================================================
+async function renderMapa() {
+  const vinhos = await DB.todos();
+  const cap = (await DB.lerConfig("capacidades")) || capacidadesPadrao();
+
+  // Índices: garrafas por zona, e qual vinho ocupa cada vaga numerada.
+  const zonaSoma = {};   // "P1-N1" -> nº de garrafas
+  const slotVinho = {};  // "P1-N2-3" -> vinho
+  for (const v of vinhos) {
+    const p = v.posicao || {};
+    if (!p.porta || !p.nivel) continue;
+    const zkey = `P${p.porta}-${p.nivel}`;
+    zonaSoma[zkey] = (zonaSoma[zkey] || 0) + (v.quantidade || 0);
+    if (p.posicaoNum) slotVinho[`${zkey}-${p.posicaoNum}`] = v;
+  }
+
+  // Monta o painel de uma porta (com seus 5 níveis).
+  const painelPorta = (p) => {
+    let h = `<div class="mapa-porta tipo-${p.tipo}">
+      <div class="mapa-porta-cab">Porta ${p.porta} · ${p.tipo}</div>`;
+    for (const n of NIVEIS) {
+      const zkey = `P${p.porta}-${n.nivel}`;
+      const oc = zonaSoma[zkey] || 0;
+      const c = cap[zkey] || 0;
+      const capTxt = n.endereco === "caixa" ? `${oc} cx` : `${oc}/${c}`;
+      h += `<div class="mapa-nivel">
+        <div class="mapa-nivel-cab"><b>${n.nivel}</b> ${esc(n.nome)}
+          <span class="mapa-cap">${capTxt}</span></div>`;
+
+      if (n.endereco === "posicional") {
+        // Vagas numeradas: cada uma é um "spot" com nome.
+        h += `<div class="mapa-slots">`;
+        for (let i = 1; i <= c; i++) {
+          const v = slotVinho[`${zkey}-${i}`];
+          h += `<button class="slot ${v ? "ocupado" : ""}" data-zona="${zkey}" data-pos="${i}">
+            <span class="slot-num">${String(i).padStart(2, "0")}</span>
+            <span class="slot-nome">${v ? esc(v.nome || "vinho") : "livre"}</span>
+          </button>`;
+        }
+        h += `</div>`;
+      } else {
+        // Zona ou caixas: bloco único com barra de ocupação.
+        const pct = c ? Math.min(100, Math.round((oc / c) * 100)) : 0;
+        const cheia = c && oc > c;
+        h += `<button class="mapa-zona ${cheia ? "cheia" : ""}" data-zona="${zkey}">
+          <span class="mapa-barra"><span style="width:${pct}%"></span></span>
+          <small>${n.endereco === "caixa" ? "caixas — toque para ver" : "toque para ver os vinhos"}${cheia ? " · ⚠️ lotada" : ""}</small>
+        </button>`;
+      }
+      h += `</div>`;
+    }
+    return h + `</div>`;
+  };
+
+  $("#mapa-scroll").innerHTML = PORTAS.map(painelPorta).join("");
+  $("#mapa-lista-titulo").textContent = "";
+  $("#mapa-lista").innerHTML = `<p class="dica">Toque numa vaga ou zona para ver os vinhos que estão lá.</p>`;
+}
+
+// Toque numa vaga/zona → lista os vinhos daquele endereço.
+$("#mapa-scroll").addEventListener("click", async (e) => {
+  const el = e.target.closest("[data-zona]");
+  if (!el) return;
+  const zona = el.dataset.zona;
+  const pos = el.dataset.pos ? Number(el.dataset.pos) : null;
+  const vinhos = (await DB.todos()).filter((v) => {
+    const p = v.posicao || {};
+    if (`P${p.porta}-${p.nivel}` !== zona) return false;
+    return pos == null ? true : p.posicaoNum === pos;
+  });
+  const ender = pos == null ? zona : `${zona}-${String(pos).padStart(2, "0")}`;
+  $("#mapa-lista-titulo").textContent = `📍 ${ender}`;
+  if (!vinhos.length) {
+    $("#mapa-lista").innerHTML = `<p class="vazio-msg">Vaga livre — nenhum vinho aqui ainda.</p>`;
+    return;
+  }
+  $("#mapa-lista").innerHTML = vinhos
+    .map((v) => `
+      <div class="cartao-vinho" data-id="${v.id}">
+        ${v.fotoDataURL ? `<img src="${v.fotoDataURL}" alt="">` : `<img alt="">`}
+        <div>
+          <div class="nome">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
+          <div class="meta">${esc(v.produtor) || "—"} · ${v.quantidade || 0}🍾</div>
+        </div>
+      </div>`)
+    .join("");
+});
+
+// Abrir o detalhe ao tocar num vinho da lista do mapa.
+$("#mapa-lista").addEventListener("click", (e) => {
+  const card = e.target.closest("[data-id]");
+  if (card) abrirDetalhe(card.dataset.id);
+});
+
+$("#nav-mapa").addEventListener("click", renderMapa);
+
 // ————— Início de tudo —————
 montarSelecaoPosicao();
 $("[data-ir='tela-ajustes']").addEventListener("click", carregarAjustes);

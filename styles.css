@@ -114,6 +114,40 @@ legend { padding: 0 .4rem; color: var(--vinho-claro); font-weight: 600; }
 .dica { font-size: .78rem; color: var(--texto-fraco); margin: 0; }
 small.dica { display: block; margin-top: .25rem; }
 
+/* ===== Mapa da adega (aba deslizável) ===== */
+.mapa-legenda { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: .2rem 0 .6rem; font-size: .8rem; }
+.chip-tinto, .chip-branco { padding: .2rem .55rem; border-radius: 999px; font-weight: 600; }
+.chip-tinto { background: rgba(176,57,76,.25); color: #f0b9c2; border: 1px solid var(--vinho); }
+.chip-branco { background: rgba(217,154,58,.2); color: #f4d59a; border: 1px solid var(--estimativa); }
+
+/* Tira de portas que desliza para os lados, com "encaixe" por porta */
+.mapa-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: .5rem; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.mapa-porta { min-width: 84%; scroll-snap-align: center; background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px; padding: .7rem; }
+.mapa-porta.tipo-branco { border-color: var(--estimativa); }
+.mapa-porta-cab { font-weight: 600; text-align: center; padding: .35rem; margin-bottom: .5rem; border-radius: 8px; background: rgba(176,57,76,.22); }
+.tipo-branco .mapa-porta-cab { background: rgba(217,154,58,.2); }
+
+.mapa-nivel { margin-bottom: .55rem; }
+.mapa-nivel-cab { font-size: .82rem; color: var(--texto-fraco); display: flex; align-items: center; gap: .35rem; margin-bottom: .25rem; }
+.mapa-nivel-cab b { color: var(--texto); }
+.mapa-cap { margin-left: auto; font-variant-numeric: tabular-nums; background: var(--cartao-2); padding: .05rem .4rem; border-radius: 6px; }
+
+.mapa-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 46px; padding: .25rem; border-radius: 8px; border: 1px dashed var(--linha); background: transparent; color: var(--texto-fraco); cursor: pointer; }
+.slot.ocupado { border-style: solid; border-color: var(--vinho); background: var(--cartao-2); color: var(--texto); }
+.tipo-branco .slot.ocupado { border-color: var(--estimativa); }
+.slot-num { font-size: .7rem; font-variant-numeric: tabular-nums; opacity: .8; }
+.slot-nome { font-size: .62rem; line-height: 1.05; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+.mapa-zona { width: 100%; text-align: left; background: var(--cartao-2); border: 1px solid var(--linha); border-radius: 8px; padding: .4rem .55rem; color: var(--texto-fraco); cursor: pointer; }
+.mapa-zona.cheia { border-color: var(--alerta); }
+.mapa-zona small { display: block; margin-top: .25rem; font-size: .72rem; }
+.mapa-barra { display: block; height: 7px; border-radius: 5px; background: rgba(255,255,255,.08); overflow: hidden; }
+.mapa-barra > span { display: block; height: 100%; background: var(--vinho-claro); }
+.tipo-branco .mapa-barra > span { background: var(--estimativa); }
+.mapa-zona.cheia .mapa-barra > span { background: var(--alerta); }
+.mapa-lista-titulo { font-size: 1rem; margin: .8rem 0 .4rem; }
+
 /* Base da janela: explica de onde veio / o raciocínio da estimativa */
 .base-janela {
   background: rgba(255,255,255,.05); border-left: 3px solid var(--estimativa);

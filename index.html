@@ -218,6 +218,26 @@
   <div id="lote-fila" class="lista"></div>
 </section>
 
+<!-- ===================== TELA: MAPA DA ADEGA ===================== -->
+<section id="tela-mapa" class="tela">
+  <header class="cabecalho">
+    <button class="link" data-ir="tela-inicio">‹ Voltar</button>
+    <h1>Mapa da adega</h1>
+  </header>
+
+  <div class="mapa-legenda">
+    <span class="chip-tinto">Tinto · Portas 1-2</span>
+    <span class="chip-branco">Branco · Porta 3</span>
+    <span class="dica">← deslize para ver as portas →</span>
+  </div>
+
+  <!-- 3 portas lado a lado, deslizáveis -->
+  <div id="mapa-scroll" class="mapa-scroll"></div>
+
+  <h2 id="mapa-lista-titulo" class="mapa-lista-titulo"></h2>
+  <div id="mapa-lista" class="lista"></div>
+</section>
+
 <!-- ===================== TELA: AJUSTES ===================== -->
 <section id="tela-ajustes" class="tela">
   <header class="cabecalho">
@@ -261,6 +281,7 @@
   <button data-ir="tela-inicio" class="ativo">🏠<span>Início</span></button>
   <button id="nav-adicionar">➕<span>Um vinho</span></button>
   <button id="nav-lote" data-ir="tela-lote">📸<span>Vários</span></button>
+  <button id="nav-mapa" data-ir="tela-mapa">🗺️<span>Mapa</span></button>
   <button data-ir="tela-ajustes">⚙️<span>Ajustes</span></button>
 </nav>
 
