@@ -42,8 +42,11 @@ function montarSelecaoPosicao() {
 //  TELA INÍCIO — alertas + lista
 // ===================================================================
 async function renderInicio() {
-  const vinhos = await DB.todos();
+  const todos = await DB.todos();
+  const vinhos = todos.filter((v) => !v.desejo); // desejos ficam fora da adega
   $("#contador").textContent = `${vinhos.length} vinho(s)`;
+  const nDesejos = todos.filter((v) => v.desejo).length;
+  $("#desejos-contador").textContent = nDesejos ? `(${nDesejos})` : "";
 
   // —— Seção "Beber em breve": só os urgentes, ordenados por urgência ——
   const urgentes = vinhos
@@ -146,18 +149,28 @@ document.addEventListener("click", (e) => {
 // ===================================================================
 //  TELA FORMULÁRIO — adicionar / editar
 // ===================================================================
-function abrirFormNovo() {
+function abrirFormNovo(comoDesejo) {
   $("#form").reset();
   $("#f-id").value = "";
-  $("#form-titulo").textContent = "Novo vinho";
+  $("#form-titulo").textContent = comoDesejo ? "Novo desejo" : "Novo vinho";
   $("#btn-excluir").classList.add("oculto");
+  $("#f-desejo").checked = !!comoDesejo;
   fotoAtual = { dataURL: "", base64: "", mime: "" };
   $("#f-foto-preview").removeAttribute("src");
   $("#ia-status").textContent = "";
   atualizarCamposCondicionais();
+  atualizarModoDesejo();
   atualizarZonaEDivergencias();
   irPara("tela-form");
 }
+
+// No modo "desejo", esconde formato/quantidade e posição (não se aplicam).
+function atualizarModoDesejo() {
+  const desejo = $("#f-desejo").checked;
+  $("#fs-formato").classList.toggle("oculto", desejo);
+  $("#fs-posicao").classList.toggle("oculto", desejo);
+}
+$("#f-desejo").addEventListener("change", atualizarModoDesejo);
 
 async function abrirFormEdicao(id) {
   const vinhos = await DB.todos();
@@ -194,7 +207,9 @@ function preencherForm(v) {
   $("#f-posicao-num").value = v.posicao?.posicaoNum ?? "";
   $("#f-posicao-nota").value = v.posicao?.posicaoNota || "";
   $("#f-display").checked = !!v.display;
+  $("#f-desejo").checked = !!v.desejo;
   $("#f-notas").value = v.notas || "";
+  atualizarModoDesejo();
   // Reconstrói a foto (inclui o base64) para que o "Buscar dados (IA)" possa reenviá-la.
   fotoAtual = v.fotoDataURL
     ? { dataURL: v.fotoDataURL, base64: v.fotoDataURL.split(",")[1] || "", mime: "image/jpeg" }
@@ -241,6 +256,7 @@ function lerForm() {
       posicaoNota: $("#f-posicao-nota").value.trim(),
     },
     display: $("#f-display").checked,
+    desejo: $("#f-desejo").checked,
     notas: $("#f-notas").value.trim(),
     fotoDataURL: fotoAtual.dataURL,
     rascunho: false, // salvar pelo formulário confirma (deixa de ser rascunho)
@@ -445,8 +461,53 @@ $("#form").addEventListener("submit", async (e) => {
     return;
   }
   await DB.salvar(v);
-  irPara("tela-inicio");
+  if (v.desejo) { irPara("tela-desejos"); renderDesejos(); }
+  else irPara("tela-inicio");
 });
+
+// ===================================================================
+//  LISTA DE DESEJOS — vinhos que quero comprar (fora da adega)
+// ===================================================================
+async function renderDesejos() {
+  const desejos = (await DB.todos()).filter((v) => v.desejo);
+  const cont = $("#lista-desejos");
+  if (!desejos.length) {
+    cont.innerHTML = `<p class="vazio-msg">Sua lista de desejos está vazia. Toque em ➕ Adicionar.</p>`;
+    return;
+  }
+  cont.innerHTML = desejos
+    .map((v) => `
+      <div class="cartao-vinho" data-id="${v.id}">
+        ${v.fotoDataURL ? `<img src="${v.fotoDataURL}" alt="">` : `<img alt="">`}
+        <div>
+          <div class="nome">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
+          <div class="meta">${esc(v.produtor) || "—"} · ${esc(v.regiao) || "—"}</div>
+          <div class="meta">${precoTexto(v.preco)}</div>
+        </div>
+        <button class="btn-comprei" data-comprei="${v.id}">✅ Comprei</button>
+      </div>`)
+    .join("");
+}
+
+// Toques na lista de desejos: "Comprei" move para a adega; tocar no card edita.
+$("#lista-desejos").addEventListener("click", async (e) => {
+  const comprei = e.target.closest("[data-comprei]");
+  if (comprei) {
+    const id = comprei.dataset.comprei;
+    const v = (await DB.todos()).find((x) => x.id === id);
+    if (!v) return;
+    v.desejo = false;
+    if (!v.quantidade) v.quantidade = 1;
+    await DB.salvar(v);
+    abrirFormEdicao(id); // abre para você posicionar na adega
+    return;
+  }
+  const card = e.target.closest("[data-id]");
+  if (card) abrirFormEdicao(card.dataset.id);
+});
+
+$("#ir-desejos").addEventListener("click", () => { irPara("tela-desejos"); renderDesejos(); });
+$("#add-desejo").addEventListener("click", () => abrirFormNovo(true));
 
 // —— Excluir ——
 $("#btn-excluir").addEventListener("click", async () => {
@@ -742,7 +803,7 @@ function montarRascunho(res, dataURL) {
     preco: { min: null, max: null, moeda: "R$", origem: "vazio" },
     janelaInicio: null, janelaFim: null, janelaOrigem: "vazio", janelaBase: "",
     posicao: { porta: 1, nivel: "N1", posicaoNum: null, posicaoNota: "" },
-    display: false, notas: res.observacao || "",
+    display: false, desejo: false, notas: res.observacao || "",
     fotoDataURL: dataURL, editadoEm: new Date().toISOString(),
   };
 }
@@ -848,7 +909,7 @@ $("#mapa-lista").addEventListener("click", (e) => {
 
 // Monta o "modelo" da adega (portas → níveis → vagas) para o 3D.
 async function modeloMapa() {
-  const vinhos = await DB.todos();
+  const vinhos = (await DB.todos()).filter((v) => !v.desejo); // desejos não ocupam a adega
   const cap = (await DB.lerConfig("capacidades")) || capacidadesPadrao();
   const zonaSoma = {}, slotVinho = {};
   for (const v of vinhos) {

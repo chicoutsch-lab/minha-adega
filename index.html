@@ -32,6 +32,8 @@
     <div id="alertas"></div>
   </div>
 
+  <button type="button" id="ir-desejos" class="botao-desejos">🛒 Lista de desejos <span id="desejos-contador"></span> ›</button>
+
   <!-- Busca + filtros -->
   <div class="filtros">
     <input id="busca" type="search" placeholder="Buscar por nome, produtor, uva…" />
@@ -82,6 +84,11 @@
       <p id="ia-status" class="ia-status"></p>
     </div>
 
+    <fieldset class="cartao">
+      <label class="checkbox"><input id="f-desejo" type="checkbox" /> 🛒 Lista de desejos (ainda não tenho)</label>
+      <p class="dica">Marcado, este vinho fica na sua lista de desejos — fora da adega (não conta capacidade, mapa nem alertas).</p>
+    </fieldset>
+
     <!-- Identificação -->
     <fieldset class="cartao">
       <legend>Identificação</legend>
@@ -105,7 +112,7 @@
     </fieldset>
 
     <!-- Formato e quantidade -->
-    <fieldset class="cartao">
+    <fieldset class="cartao" id="fs-formato">
       <legend>Formato e quantidade</legend>
       <div class="dois">
         <label>Formato
@@ -161,7 +168,7 @@
     </fieldset>
 
     <!-- Posição física -->
-    <fieldset class="cartao">
+    <fieldset class="cartao" id="fs-posicao">
       <legend>Posição física</legend>
       <div id="zona-sugerida" class="zona-sugerida"></div>
       <div class="dois">
@@ -216,6 +223,17 @@
   </div>
 
   <div id="lote-fila" class="lista"></div>
+</section>
+
+<!-- ===================== TELA: LISTA DE DESEJOS ===================== -->
+<section id="tela-desejos" class="tela">
+  <header class="cabecalho">
+    <button class="link" data-ir="tela-inicio">‹ Voltar</button>
+    <h1>Lista de desejos</h1>
+  </header>
+  <p class="dica">Vinhos que você quer comprar. Pesquise com a IA e, quando comprar, mova para a adega num toque.</p>
+  <button type="button" id="add-desejo" class="btn-principal">➕ Adicionar à lista de desejos</button>
+  <div id="lista-desejos" class="lista"></div>
 </section>
 
 <!-- ===================== TELA: MAPA DA ADEGA ===================== -->
