@@ -74,6 +74,12 @@ PASSOS:
 Foque no PREÇO; os demais campos pode deixar vazios.
 ${FORMATO}`;
 
+  // Modo FOCADO EM HARMONIZAÇÃO: sugestão de comida (conhecimento, sem web).
+  const INSTRUCAO_HARMONIZACAO = `Você é sommelier. Sugira a HARMONIZAÇÃO com comida deste vinho, em português,
+pelos princípios clássicos (corpo, taninos, acidez, uva, região). Dê 3 a 5 pratos/categorias + uma frase curta
+do porquê. Brancos/rosés: pratos leves (peixes, frutos do mar, saladas, massas leves). É uma SUGESTÃO, não invente
+"fato". Responda SOMENTE com este JSON: { "harmonizacao": "" }`;
+
   // Modo FOCADO EM PREÇO NA ORIGEM: preço de prateleira no país de origem do vinho.
   const INSTRUCAO_PRECO_ORIGEM = `Você é especialista em vinhos. Encontre o PREÇO DE VAREJO no PAÍS DE ORIGEM do vinho
 (ou no maior mercado dessa origem), para comparar com o preço brasileiro. NÃO é o custo de importar.
@@ -189,6 +195,7 @@ Responda SOMENTE com este JSON, sem texto fora:
       if (foco === "janela") { instrucao = INSTRUCAO_JANELA; busca = true; }
       else if (foco === "preco") { instrucao = INSTRUCAO_PRECO; busca = true; }
       else if (foco === "precoOrigem") { instrucao = INSTRUCAO_PRECO_ORIGEM; busca = true; }
+      else if (foco === "harmonizacao") { instrucao = INSTRUCAO_HARMONIZACAO; busca = false; }
       else if (foco === "rapido" || comBusca === false) { instrucao = INSTRUCAO_RAPIDA; busca = false; }
       else { instrucao = INSTRUCAO_COMPLETA; busca = true; }
       const args = { apiKey, modelo, texto, fotoBase64, fotoMime, comBusca: busca, instrucao };

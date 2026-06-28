@@ -210,6 +210,7 @@ function preencherForm(v) {
   $("#f-display").checked = !!v.display;
   $("#f-desejo").checked = !!v.desejo;
   $("#f-premiacoes").value = premiacoesParaTexto(v.premiacoes);
+  $("#f-harmonizacao").value = v.harmonizacao || "";
   $("#f-notas").value = v.notas || "";
   atualizarModoDesejo();
   // Reconstrói a foto (inclui o base64) para que o "Buscar dados (IA)" possa reenviá-la.
@@ -260,6 +261,7 @@ function lerForm() {
     },
     display: $("#f-display").checked,
     desejo: $("#f-desejo").checked,
+    harmonizacao: $("#f-harmonizacao").value.trim(),
     notas: $("#f-notas").value.trim(),
     fotoDataURL: fotoAtual.dataURL,
     rascunho: false, // salvar pelo formulário confirma (deixa de ser rascunho)
@@ -473,6 +475,33 @@ $("#btn-janela").addEventListener("click", async () => {
   }
 });
 
+// —— Sugerir harmonização (IA, conhecimento, sem web) ——
+$("#btn-harmonizar").addEventListener("click", async () => {
+  const provedor = (await DB.lerConfig("provedor")) || "anthropic";
+  const apiKey = await DB.lerConfig("apiKey");
+  const modelo = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
+  if (!apiKey) { $("#harmonizar-status").textContent = "⚠️ Configure sua chave de API nos Ajustes."; return; }
+  const v = lerForm();
+  const desc = [v.nome, v.produtor, v.tipo, (v.uvas || []).join("/"), v.regiao].filter(Boolean).join(" · ");
+  if (!desc.trim()) { $("#harmonizar-status").textContent = "Preencha ao menos nome e uva/tipo antes."; return; }
+  $("#btn-harmonizar").disabled = true;
+  $("#harmonizar-status").textContent = "🍽️ Pensando na harmonização…";
+  try {
+    const res = await IA.extrair({ provedor, apiKey, modelo, foco: "harmonizacao",
+      texto: `Vinho: ${desc}. Sugira a harmonização com comida.` });
+    if (res.harmonizacao) {
+      $("#f-harmonizacao").value = res.harmonizacao;
+      $("#harmonizar-status").textContent = "✓ Sugestão pronta. Edite à vontade — você é o curador.";
+    } else {
+      $("#harmonizar-status").textContent = "Não consegui gerar a harmonização.";
+    }
+  } catch (err) {
+    $("#harmonizar-status").textContent = "❌ " + err.message;
+  } finally {
+    $("#btn-harmonizar").disabled = false;
+  }
+});
+
 // —— Salvar ——
 $("#form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -581,6 +610,7 @@ async function abrirDetalhe(id) {
       ${linha("Posição", `${formatarEndereco(v.posicao)}${v.posicao?.posicaoNota ? " · " + esc(v.posicao.posicaoNota) : ""}`)}
       ${v.notas ? linha("Notas", esc(v.notas)) : ""}
     </div>
+    ${v.harmonizacao ? `<div class="bloco-harmonizar"><div class="harmonizar-titulo">🍽️ Harmoniza com</div><p>${esc(v.harmonizacao)}</p></div>` : ""}
     <div class="zona-sugerida">💡 Zona sugerida: <b>${sug.nivel}</b> — ${esc(sug.motivo)}</div>
     <div class="divergencias">
       ${divs.map((d) => `<div class="diverg ${d.gravidade}">⚠️ ${esc(d.texto)}</div>`).join("")}
@@ -968,7 +998,7 @@ function montarRascunho(res, dataURL) {
     preco: { min: null, max: null, moeda: "R$", origem: "vazio" },
     janelaInicio: null, janelaFim: null, janelaOrigem: "vazio", janelaBase: "",
     posicao: { porta: 1, nivel: "N1", posicaoNum: null, posicaoNota: "" },
-    display: false, desejo: false, premiacoes: [], notas: res.observacao || "",
+    display: false, desejo: false, premiacoes: [], harmonizacao: "", notas: res.observacao || "",
     fotoDataURL: dataURL, editadoEm: new Date().toISOString(),
   };
 }
