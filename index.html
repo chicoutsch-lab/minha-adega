@@ -139,9 +139,11 @@
       </label>
     </fieldset>
 
-    <!-- Janela de consumo (faixa de anos) -->
+    <!-- Janela de consumo (faixa de anos) — o ponto mais importante -->
     <fieldset class="cartao">
       <legend>Janela de consumo (faixa de anos)</legend>
+      <button type="button" id="btn-janela" class="btn-principal">🍷 Buscar janela de consumo (IA)</button>
+      <p id="janela-status" class="ia-status"></p>
       <div class="dois">
         <label>De (ano) <input id="f-janela-inicio" type="number" inputmode="numeric" /></label>
         <label>Até (ano) <input id="f-janela-fim" type="number" inputmode="numeric" /></label>
@@ -154,6 +156,7 @@
           <option value="manual">✎ preenchido por mim</option>
         </select>
       </label>
+      <p id="f-janela-base" class="base-janela oculto"></p>
       <p class="dica">A janela é incerta: pense sempre em faixa, nunca data cravada.</p>
     </fieldset>
 

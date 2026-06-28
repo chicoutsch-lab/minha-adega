@@ -114,6 +114,13 @@ legend { padding: 0 .4rem; color: var(--vinho-claro); font-weight: 600; }
 .dica { font-size: .78rem; color: var(--texto-fraco); margin: 0; }
 small.dica { display: block; margin-top: .25rem; }
 
+/* Base da janela: explica de onde veio / o raciocínio da estimativa */
+.base-janela {
+  background: rgba(255,255,255,.05); border-left: 3px solid var(--estimativa);
+  border-radius: 8px; padding: .55rem .7rem; margin: .1rem 0 .3rem;
+  font-size: .82rem; color: var(--texto); line-height: 1.35;
+}
+
 /* Marca de origem dos dados (cor por confiança) */
 .sel-origem { font-weight: 600; }
 .badge { display: inline-block; font-size: .72rem; padding: .12rem .5rem; border-radius: 6px; }

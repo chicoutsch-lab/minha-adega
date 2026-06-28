@@ -188,6 +188,7 @@ function preencherForm(v) {
   $("#f-janela-inicio").value = v.janelaInicio ?? "";
   $("#f-janela-fim").value = v.janelaFim ?? "";
   $("#f-janela-origem").value = v.janelaOrigem || "vazio";
+  mostrarBaseJanela(v.janelaBase, v.janelaOrigem);
   $("#f-porta").value = v.posicao?.porta || 1;
   $("#f-nivel").value = v.posicao?.nivel || "N1";
   $("#f-posicao-num").value = v.posicao?.posicaoNum ?? "";
@@ -232,6 +233,7 @@ function lerForm() {
     janelaInicio: num("#f-janela-inicio"),
     janelaFim: num("#f-janela-fim"),
     janelaOrigem: $("#f-janela-origem").value,
+    janelaBase: $("#f-janela-base").dataset.base || "",
     posicao: {
       porta: Number($("#f-porta").value),
       nivel: $("#f-nivel").value,
@@ -362,11 +364,77 @@ function aplicarExtracao(res) {
     set("#f-janela-inicio", res.janela.inicio);
     set("#f-janela-fim", res.janela.fim);
     $("#f-janela-origem").value = res.janela.origem || "vazio";
+    mostrarBaseJanela(res.janela.base, res.janela.origem);
   }
   if (res.observacao) $("#f-notas").value = res.observacao;
   atualizarCamposCondicionais();
   atualizarZonaEDivergencias();
 }
+
+// Mostra (e guarda) a "base" da janela: de onde veio ou o raciocínio da estimativa.
+function mostrarBaseJanela(texto, origem) {
+  const el = $("#f-janela-base");
+  if (texto) {
+    const rotulo = origem === "fonte" ? "✓ Fonte: " : origem === "estimativa" ? "~ Estimativa: " : "";
+    el.textContent = rotulo + texto;
+    el.dataset.base = texto;
+    el.classList.remove("oculto");
+  } else {
+    el.textContent = "";
+    el.dataset.base = "";
+    el.classList.add("oculto");
+  }
+}
+
+// —— Botão "Buscar janela de consumo (IA)" — busca focada e profunda ——
+$("#btn-janela").addEventListener("click", async () => {
+  const provedor = (await DB.lerConfig("provedor")) || "anthropic";
+  const apiKey = await DB.lerConfig("apiKey");
+  const modelo = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
+  if (!apiKey) {
+    $("#janela-status").textContent = "⚠️ Configure sua chave de API nos Ajustes.";
+    return;
+  }
+  const v = lerForm();
+  const desc = [v.nome, v.produtor, v.safra, (v.uvas || []).join("/"), v.regiao, v.pais, v.formato]
+    .filter(Boolean).join(" · ");
+  if (!desc.trim()) {
+    $("#janela-status").textContent = "Preencha ao menos o nome e a safra antes de buscar a janela.";
+    return;
+  }
+  $("#btn-janela").disabled = true;
+  $("#janela-status").textContent = "🔎 Pesquisando a janela de consumo…";
+  try {
+    const res = await IA.extrair({
+      provedor, apiKey, modelo, foco: "janela",
+      texto: `Vinho: ${desc}. Determine a janela de consumo (faixa de anos para beber).`,
+      fotoBase64: fotoAtual.base64, fotoMime: fotoAtual.mime,
+    });
+    const set = (sel, val) => { if (val != null && val !== "") $(sel).value = val; };
+    if (res.janela) {
+      set("#f-janela-inicio", res.janela.inicio);
+      set("#f-janela-fim", res.janela.fim);
+      $("#f-janela-origem").value = res.janela.origem || "vazio";
+      mostrarBaseJanela(res.janela.base, res.janela.origem);
+    }
+    // Só aproveita preço se vier de fonte (não força estimativa de preço aqui).
+    if (res.preco && res.preco.origem === "fonte") {
+      set("#f-preco-min", res.preco.min);
+      set("#f-preco-max", res.preco.max);
+      set("#f-preco-moeda", res.preco.moeda);
+      $("#f-preco-origem").value = "fonte";
+    }
+    const marca = res.janela?.origem === "fonte" ? "confirmada por fonte"
+      : res.janela?.origem === "estimativa" ? "estimada (revise com calma)"
+      : "não encontrada — preencha manual";
+    $("#janela-status").textContent = `✓ Janela ${marca}. Você é o curador.`;
+    atualizarZonaEDivergencias();
+  } catch (err) {
+    $("#janela-status").textContent = "❌ " + err.message;
+  } finally {
+    $("#btn-janela").disabled = false;
+  }
+});
 
 // —— Salvar ——
 $("#form").addEventListener("submit", async (e) => {
@@ -419,6 +487,7 @@ async function abrirDetalhe(id) {
       ${linha("Garrafas", v.quantidade ?? 0)}
       ${linha("Preço", precoTexto(v.preco))}
       ${linha("Janela", janelaTexto(v))}
+      ${v.janelaBase ? `<p class="base-janela">${v.janelaOrigem === "fonte" ? "✓ Fonte: " : v.janelaOrigem === "estimativa" ? "~ Estimativa: " : ""}${esc(v.janelaBase)}</p>` : ""}
       ${linha("Posição", `${formatarEndereco(v.posicao)}${v.posicao?.posicaoNota ? " · " + esc(v.posicao.posicaoNota) : ""}`)}
       ${v.notas ? linha("Notas", esc(v.notas)) : ""}
     </div>
@@ -635,7 +704,7 @@ function montarRascunho(res, dataURL) {
     tipo: res.tipo === "tinto" || res.tipo === "branco" ? res.tipo : "tinto",
     formato: "750ml", formatoOutro: "", quantidade: 1,
     preco: { min: null, max: null, moeda: "R$", origem: "vazio" },
-    janelaInicio: null, janelaFim: null, janelaOrigem: "vazio",
+    janelaInicio: null, janelaFim: null, janelaOrigem: "vazio", janelaBase: "",
     posicao: { porta: 1, nivel: "N1", posicaoNum: null, posicaoNota: "" },
     display: false, notas: res.observacao || "",
     fotoDataURL: dataURL, editadoEm: new Date().toISOString(),

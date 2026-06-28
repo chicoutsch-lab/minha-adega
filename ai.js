@@ -19,7 +19,7 @@ const IA = (() => {
   "nome": "", "produtor": "", "regiao": "", "pais": "",
   "uvas": [], "safra": null, "tipo": null,
   "preco": { "min": null, "max": null, "moeda": "R$", "origem": "vazio" },
-  "janela": { "inicio": null, "fim": null, "origem": "vazio" },
+  "janela": { "inicio": null, "fim": null, "origem": "vazio", "base": "" },
   "fontes": [], "observacao": ""
 }`;
 
@@ -41,6 +41,25 @@ REGRAS:
 - "tipo" = "tinto" ou "branco" (rosé/espumante: "branco").
 ${FORMATO}`;
 
+  // Modo FOCADO EM JANELA: o ponto mais importante do app. Sommelier que pesquisa.
+  const INSTRUCAO_JANELA = `Você é um sommelier experiente. Sua tarefa é determinar a JANELA DE CONSUMO
+(faixa de anos ideal para beber) do vinho descrito. Esta é a informação mais importante.
+PASSOS:
+1) PESQUISE na web por "drink window" / janela de guarda deste vinho e safra: críticos
+   (Wine Spectator, Decanter, Vinous/Antonio Galloni, Wine Advocate/Robert Parker, James
+   Suckling), notas do produtor e o consenso de comunidades (CellarTracker, Vivino).
+2) Se ACHAR fonte com janela: janela.origem = "fonte" e janela.base = qual fonte/crítico e o ano.
+3) Se NÃO achar janela publicada (normal em vinhos comuns): faça uma ESTIMATIVA fundamentada
+   pela uva, região, qualidade da safra e potencial de guarda do estilo. janela.origem =
+   "estimativa" e janela.base = explique o raciocínio em uma frase curta. NÃO deixe vazio se
+   for possível estimar com responsabilidade.
+4) A janela é SEMPRE uma FAIXA de anos (início e fim), nunca data exata.
+5) Dê a janela para uma garrafa PADRÃO de 750ml — o app ajusta sozinho para magnum. Não some o
+   efeito do formato você mesmo.
+6) Se também encontrar preço com fonte, preencha (mesma regra de origem). Os demais campos pode
+   deixar vazios — o foco é a janela.
+${FORMATO}`;
+
   function extrairJSON(texto) {
     const ini = texto.indexOf("{");
     const fim = texto.lastIndexOf("}");
@@ -49,7 +68,7 @@ ${FORMATO}`;
   }
 
   // —— Anthropic (Claude) ——
-  async function viaAnthropic({ apiKey, modelo, texto, fotoBase64, fotoMime, comBusca }) {
+  async function viaAnthropic({ apiKey, modelo, texto, fotoBase64, fotoMime, comBusca, instrucao }) {
     const conteudo = [];
     if (fotoBase64) {
       conteudo.push({
@@ -76,7 +95,7 @@ ${FORMATO}`;
         body: JSON.stringify({
           model: modelo,
           max_tokens: 2048,
-          system: comBusca ? INSTRUCAO_COMPLETA : INSTRUCAO_RAPIDA,
+          system: instrucao,
           tools: ferramentas,
           messages,
         }),
@@ -100,8 +119,7 @@ ${FORMATO}`;
   }
 
   // —— OpenAI (alternativa) ——
-  async function viaOpenAI({ apiKey, modelo, texto, fotoBase64, fotoMime, comBusca }) {
-    const instrucao = comBusca ? INSTRUCAO_COMPLETA : INSTRUCAO_RAPIDA;
+  async function viaOpenAI({ apiKey, modelo, texto, fotoBase64, fotoMime, comBusca, instrucao }) {
     const conteudo = [{ type: "input_text", text: (texto || "Extraia os dados deste vinho.") + "\n\n" + instrucao }];
     if (fotoBase64) {
       conteudo.push({ type: "input_image", image_url: `data:${fotoMime};base64,${fotoBase64}` });
@@ -133,10 +151,15 @@ ${FORMATO}`;
   }
 
   return {
-    // comBusca = true por padrão (modo completo). O lote chama com false.
-    async extrair({ provedor, apiKey, modelo, texto, fotoBase64, fotoMime, comBusca = true }) {
+    // foco: "rapido" (só rótulo, sem web) | "completo" (web) | "janela" (web, focado na janela).
+    // comBusca segue o foco; o lote usa foco "rapido".
+    async extrair({ provedor, apiKey, modelo, texto, fotoBase64, fotoMime, comBusca = true, foco }) {
       if (!apiKey) throw new Error("Configure sua chave de API nos Ajustes primeiro.");
-      const args = { apiKey, modelo, texto, fotoBase64, fotoMime, comBusca };
+      let instrucao, busca;
+      if (foco === "janela") { instrucao = INSTRUCAO_JANELA; busca = true; }
+      else if (foco === "rapido" || comBusca === false) { instrucao = INSTRUCAO_RAPIDA; busca = false; }
+      else { instrucao = INSTRUCAO_COMPLETA; busca = true; }
+      const args = { apiKey, modelo, texto, fotoBase64, fotoMime, comBusca: busca, instrucao };
       return provedor === "openai" ? viaOpenAI(args) : viaAnthropic(args);
     },
   };
