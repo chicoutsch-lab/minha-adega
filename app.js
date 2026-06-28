@@ -48,7 +48,7 @@ const ANO_AGORA = new Date().getFullYear();
 function tipoAmplo(v) {
   const t = ((v.nome || "") + " " + (v.notas || "")).toLowerCase();
   if (/porto|tawny|licoroso|fortific|madeira|jerez/.test(t)) return "fortificado";
-  if (/\bros[eé]\b/.test(t)) return "rosé";
+  if (/\bros[eé]/.test(t)) return "rosé";
   return v.tipo; // "tinto" ou "branco"
 }
 

@@ -7,7 +7,7 @@
   Sempre que você ALTERAR o código do app, suba o número da versão abaixo
   (CACHE) para o aparelho buscar os arquivos novos.
 */
-const CACHE = "adega-v21";
+const CACHE = "adega-v22";
 const ARQUIVOS = [
   "./",
   "./index.html",
