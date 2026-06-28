@@ -22,6 +22,12 @@ const REGRAS = {
     magnum: { inicio: 2, fim: 4 },
     outro: { inicio: 0, fim: 0 },
   },
+  // Até este preço (no campo de preço do vinho) consideramos "do dia a dia".
+  // Vinhos prontos E baratos são os candidatos ideais para o aramado N3.
+  LIMITE_BARATO: 150,
+  // Cortes de altura no painel de guarda (N1): quanto mais anos até o ponto,
+  // mais no alto. Ex.: 8+ anos = bem no alto; 4-7 = parte de cima; <4 = embaixo.
+  ALTURA_GUARDA: { alto: 8, meio: 4 },
 };
 
 // ——— Mapa físico da adega (fabricante EDR) ———
@@ -106,6 +112,27 @@ function avaliarConsumo(vinho) {
   };
 }
 
+// Anos que ainda faltam para o vinho entrar na janela (0 se já está/passou).
+function anosAteAbrir(vinho) {
+  const j = janelaEfetiva(vinho);
+  if (!j || j.inicio == null) return 0;
+  return Math.max(0, j.inicio - ANO_ATUAL);
+}
+
+// Altura sugerida dentro do painel de guarda N1 (quanto mais guarda, mais no alto).
+function alturaGuarda(anos) {
+  if (anos >= REGRAS.ALTURA_GUARDA.alto) return "bem no alto";
+  if (anos >= REGRAS.ALTURA_GUARDA.meio) return "parte de cima";
+  return "parte de baixo";
+}
+
+// "Do dia a dia": preço informado até o limite configurável.
+function ehBarato(vinho) {
+  const p = vinho.preco || {};
+  const ref = p.max != null ? p.max : p.min;
+  return ref != null && ref <= REGRAS.LIMITE_BARATO;
+}
+
 // ——— 3) Zona sugerida pela lógica de consumo ———
 function sugerirZona(vinho) {
   const { estado } = avaliarConsumo(vinho);
@@ -113,19 +140,30 @@ function sugerirZona(vinho) {
   if (vinho.formato === "magnum") {
     return { nivel: "N4", motivo: "Magnum vai no aramado de garrafas grandes (N4)." };
   }
+  // Nobre/display → vitrine (N2), mesmo que já esteja pronto.
   if (vinho.display) {
-    return { nivel: "N2", motivo: "Marcado como display — vai na vitrine (N2)." };
+    return { nivel: "N2", motivo: "Rótulo nobre/display — vitrine (N2)." };
   }
-  if (estado === "beber_ja" || estado === "passou") {
-    return { nivel: "N2", motivo: "Para beber em breve — deixe à mão, na vitrine (N2)." };
+  // Pronto para beber (e não nobre) → aramado N3, à mão. Baratos são o caso ideal.
+  if (estado === "beber_ja" || estado === "otima" || estado === "passou") {
+    return {
+      nivel: "N3",
+      motivo: ehBarato(vinho)
+        ? "Pronto e mais em conta — aramado N3 (do dia a dia, à mão)."
+        : "Pronto para beber — aramado N3 (acessível). Se for especial, considere a vitrine (N2).",
+    };
   }
-  if (estado === "otima") {
-    return { nivel: "N3", motivo: "Pronto para beber — estoque acessível (aramado N3)." };
-  }
+  // Em guarda → painel N1, com altura conforme o tempo que falta para o ponto.
   if (estado === "guarda") {
-    return { nivel: "N1", motivo: "Em guarda — volume principal (painel N1)." };
+    const anos = anosAteAbrir(vinho);
+    const altura = alturaGuarda(anos);
+    return {
+      nivel: "N1",
+      altura,
+      motivo: `Em guarda — painel N1, ${altura} (faltam ~${anos} ano(s); quanto mais guarda, mais no alto).`,
+    };
   }
-  return { nivel: "N3", motivo: "Sem janela definida — estoque (aramado N3)." };
+  return { nivel: "N3", motivo: "Sem janela definida — estoque acessível (aramado N3)." };
 }
 
 // ——— 4) Divergências (apontar, não obrigar) ———
@@ -152,16 +190,23 @@ function divergencias(vinho) {
       texto: `Magnum fora do nível de magnums (está em ${pos.nivel}, sugerido N4).`,
     });
   }
-  // (c) "Beber em breve" guardado numa zona de guarda.
-  const zonasGuarda = ["N1", "N3", "BASE"];
+  // (c) Pronto para beber, mas guardado numa zona de guarda profunda (N1/base).
+  const guardaProfunda = ["N1", "BASE"];
   if (
-    (estado === "beber_ja" || estado === "passou") &&
+    (estado === "beber_ja" || estado === "otima" || estado === "passou") &&
     pos.nivel &&
-    zonasGuarda.includes(pos.nivel)
+    guardaProfunda.includes(pos.nivel)
   ) {
     lista.push({
       gravidade: "media",
-      texto: `Marcado para beber em breve, mas está em zona de guarda (${pos.nivel}). Mover para a vitrine (N2)?`,
+      texto: `Pronto para beber, mas em zona de guarda (${pos.nivel}). Mover para o aramado N3${vinho.display ? " ou vitrine N2" : ""} (mais à mão)?`,
+    });
+  }
+  // (c2) Rótulo nobre/display fora da vitrine.
+  if (vinho.display && pos.nivel && pos.nivel !== "N2") {
+    lista.push({
+      gravidade: "media",
+      texto: `Rótulo nobre/display fora da vitrine (está em ${pos.nivel}, sugerida N2).`,
     });
   }
   // (d) Em guarda ocupando a vitrine (de baixa gravidade).
