@@ -60,6 +60,16 @@ PASSOS:
    deixar vazios — o foco é a janela.
 ${FORMATO}`;
 
+  // Modo FOCADO EM PREÇO: busca o preço de varejo ATUAL no Brasil.
+  const INSTRUCAO_PRECO = `Você é especialista em vinhos. Encontre o PREÇO DE VAREJO ATUAL no BRASIL do vinho descrito.
+PASSOS:
+1) Pesquise lojas brasileiras (Evino, Wine.com.br, Grand Cru, Mistral, Divvino, Lab21, etc.).
+2) Se achar → preco.origem = "fonte" e preco.base = qual(is) loja(s) e a referência (ex.: "Grand Cru R$X").
+3) Se só achar preço internacional → converta (~5,4 BRL/USD) e marque preco.origem = "estimativa".
+4) Se não achar → preco com min/max null e origem "vazio".
+Foque no PREÇO; os demais campos pode deixar vazios.
+${FORMATO}`;
+
   function extrairJSON(texto) {
     const ini = texto.indexOf("{");
     const fim = texto.lastIndexOf("}");
@@ -157,6 +167,7 @@ ${FORMATO}`;
       if (!apiKey) throw new Error("Configure sua chave de API nos Ajustes primeiro.");
       let instrucao, busca;
       if (foco === "janela") { instrucao = INSTRUCAO_JANELA; busca = true; }
+      else if (foco === "preco") { instrucao = INSTRUCAO_PRECO; busca = true; }
       else if (foco === "rapido" || comBusca === false) { instrucao = INSTRUCAO_RAPIDA; busca = false; }
       else { instrucao = INSTRUCAO_COMPLETA; busca = true; }
       const args = { apiKey, modelo, texto, fotoBase64, fotoMime, comBusca: busca, instrucao };

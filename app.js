@@ -297,6 +297,21 @@ $("#f-foto").addEventListener("change", async (e) => {
   if (!arquivo) return;
   fotoAtual = await processarFoto(arquivo);
   $("#f-foto-preview").src = fotoAtual.dataURL;
+  // Autopreencher: lê o rótulo sozinho (rápido, sem busca web) se houver chave e o nome estiver vazio.
+  const apiKey = await DB.lerConfig("apiKey");
+  if (apiKey && !$("#f-nome").value.trim()) {
+    const provedor = (await DB.lerConfig("provedor")) || "anthropic";
+    const modelo = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
+    $("#ia-status").textContent = "✨ Lendo o rótulo…";
+    try {
+      const res = await IA.extrair({ provedor, apiKey, modelo, foco: "rapido",
+        texto: "Leia o rótulo desta foto.", fotoBase64: fotoAtual.base64, fotoMime: fotoAtual.mime });
+      aplicarExtracao(res);
+      $("#ia-status").textContent = "✓ Rótulo lido. Revise — para preço/janela, toque em ✨ Buscar dados (IA).";
+    } catch (err) {
+      $("#ia-status").textContent = "Não li o rótulo automaticamente: " + err.message;
+    }
+  }
 });
 
 // Reduz a imagem (máx. 900px) e converte para JPEG — economiza espaço.
@@ -547,6 +562,7 @@ async function abrirDetalhe(id) {
       ${linha("Tipo / formato", `${v.tipo} · ${v.formato}${v.formato === "outro" ? " (" + esc(v.formatoOutro) + ")" : ""}`)}
       ${linha("Garrafas", v.quantidade ?? 0)}
       ${linha("Preço", precoTexto(v.preco))}
+      ${precoExtra(v)}
       ${linha("Janela", janelaTexto(v))}
       ${v.janelaBase ? `<p class="base-janela">${v.janelaOrigem === "fonte" ? "✓ Fonte: " : v.janelaOrigem === "estimativa" ? "~ Estimativa: " : ""}${esc(v.janelaBase)}</p>` : ""}
       ${linha("Posição", `${formatarEndereco(v.posicao)}${v.posicao?.posicaoNota ? " · " + esc(v.posicao.posicaoNota) : ""}`)}
@@ -558,6 +574,7 @@ async function abrirDetalhe(id) {
     </div>
     <div class="acoes">
       <button class="btn-principal" id="det-bebi">🍷 Bebi uma (-1)</button>
+      <button class="btn-secundario" id="det-preco">🔄 Atualizar preço</button>
       <button class="btn-secundario" id="det-editar">✏️ Editar</button>
     </div>`;
 
@@ -567,7 +584,57 @@ async function abrirDetalhe(id) {
     abrirDetalhe(id);
   };
   $("#det-editar").onclick = () => abrirFormEdicao(id);
+
+  // Acompanhar preço: busca o preço atual no varejo BR e guarda data + variação.
+  $("#det-preco").onclick = async () => {
+    const provedor = (await DB.lerConfig("provedor")) || "anthropic";
+    const apiKey = await DB.lerConfig("apiKey");
+    const modelo = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
+    if (!apiKey) { alert("Configure sua chave de API nos Ajustes."); return; }
+    const btn = $("#det-preco");
+    btn.disabled = true; btn.textContent = "🔎 Buscando…";
+    const desc = [v.nome, v.produtor, v.safra, (v.uvas || []).join("/"), v.regiao].filter(Boolean).join(" · ");
+    try {
+      const res = await IA.extrair({ provedor, apiKey, modelo, foco: "preco",
+        texto: `Vinho: ${desc}. Qual o preço de varejo atual no Brasil?` });
+      if (res.preco && (res.preco.min != null || res.preco.max != null)) {
+        const atual = v.preco || {};
+        if (atual.min != null || atual.max != null) v.precoAnterior = { min: atual.min, max: atual.max, moeda: atual.moeda };
+        v.preco = { min: res.preco.min, max: res.preco.max, moeda: "R$", origem: res.preco.origem || "fonte", base: res.preco.base || "" };
+        v.precoAtualizadoEm = new Date().toISOString().slice(0, 10);
+        await DB.salvar(v);
+        abrirDetalhe(id);
+      } else {
+        alert("Não encontrei preço atual em loja brasileira.");
+        btn.disabled = false; btn.textContent = "🔄 Atualizar preço";
+      }
+    } catch (err) {
+      alert("Erro ao buscar preço: " + err.message);
+      btn.disabled = false; btn.textContent = "🔄 Atualizar preço";
+    }
+  };
   irPara("tela-detalhe");
+}
+
+// Linha extra sob o preço: data da última atualização + variação.
+function precoExtra(v) {
+  if (!v.precoAtualizadoEm && !v.precoAnterior) return "";
+  const partes = [];
+  if (v.precoAtualizadoEm) {
+    const [a, m, d] = v.precoAtualizadoEm.split("-");
+    partes.push(`atualizado em ${d}/${m}/${a}`);
+  }
+  const varr = variacaoPreco(v);
+  if (varr) partes.push(varr);
+  return `<p class="dica" style="margin:-.2rem 0 .3rem">${partes.join(" · ")}</p>`;
+}
+function valorRep(p) { return p ? (p.max != null ? p.max : (p.min != null ? p.min : null)) : null; }
+function variacaoPreco(v) {
+  const ant = valorRep(v.precoAnterior), atu = valorRep(v.preco);
+  if (ant == null || atu == null) return "";
+  if (atu > ant) return `↑ subiu (era R$ ${ant})`;
+  if (atu < ant) return `↓ caiu (era R$ ${ant})`;
+  return "→ estável";
 }
 
 // Textos de apoio para o detalhe.
