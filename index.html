@@ -92,15 +92,16 @@
         <label>País <input id="f-pais" type="text" /></label>
       </div>
       <label>Uva(s) <input id="f-uvas" type="text" placeholder="separe por vírgula" /></label>
-      <div class="dois">
-        <label>Safra <input id="f-safra" type="number" inputmode="numeric" /></label>
-        <label>Tipo / temperatura
-          <select id="f-tipo">
-            <option value="tinto">Tinto (Porta 1 ou 2)</option>
-            <option value="branco">Branco (Porta 3)</option>
-          </select>
-        </label>
-      </div>
+      <label>Ano da safra
+        <input id="f-safra" type="number" inputmode="numeric" placeholder="ex.: 2019" min="1900" max="2100" />
+        <small class="dica">Deixe vazio se for sem safra (não-safrado). Esse ano é o que define a janela de consumo.</small>
+      </label>
+      <label>Tipo / temperatura
+        <select id="f-tipo">
+          <option value="tinto">Tinto (Porta 1 ou 2)</option>
+          <option value="branco">Branco (Porta 3)</option>
+        </select>
+      </label>
     </fieldset>
 
     <!-- Formato e quantidade -->

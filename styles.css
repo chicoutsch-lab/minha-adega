@@ -112,6 +112,7 @@ legend { padding: 0 .4rem; color: var(--vinho-claro); font-weight: 600; }
 .checkbox input { width: auto; }
 .oculto { display: none !important; }
 .dica { font-size: .78rem; color: var(--texto-fraco); margin: 0; }
+small.dica { display: block; margin-top: .25rem; }
 
 /* Marca de origem dos dados (cor por confiança) */
 .sel-origem { font-weight: 600; }
