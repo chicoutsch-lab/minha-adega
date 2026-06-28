@@ -20,6 +20,7 @@ const IA = (() => {
   "uvas": [], "safra": null, "tipo": null,
   "preco": { "min": null, "max": null, "moeda": "R$", "origem": "vazio" },
   "janela": { "inicio": null, "fim": null, "origem": "vazio", "base": "" },
+  "premiacoes": [],
   "fontes": [], "observacao": ""
 }`;
 
@@ -39,6 +40,8 @@ REGRAS:
 - Para PREÇO e JANELA: "origem" = "fonte" (fonte clara), "estimativa" (dedução sua) ou "vazio".
 - Janela de consumo é sempre uma FAIXA de anos (início e fim), nunca data exata.
 - "tipo" = "tinto" ou "branco" (rosé/espumante: "branco").
+- "premiacoes": se achar notas de críticos (James Suckling, Wine Advocate/Parker, Vinous, Decanter,
+  Wine Spectator, Tim Atkin), liste como [{"critico":"James Suckling","pontos":97}]. Só com fonte.
 ${FORMATO}`;
 
   // Modo FOCADO EM JANELA: o ponto mais importante do app. Sommelier que pesquisa.
@@ -58,6 +61,7 @@ PASSOS:
    efeito do formato você mesmo.
 6) Se também encontrar preço com fonte, preencha (mesma regra de origem). Os demais campos pode
    deixar vazios — o foco é a janela.
+7) Se achar notas de críticos, preencha "premiacoes" como [{"critico":"James Suckling","pontos":97}].
 ${FORMATO}`;
 
   // Modo FOCADO EM PREÇO: busca o preço de varejo ATUAL no Brasil.

@@ -127,6 +127,7 @@ function aplicarFiltros(vinhos) {
           <div class="meta">${esc(v.produtor) || "—"} · ${formatarEndereco(v.posicao)}</div>
           ${tagEstado}
           ${v.display ? '<span class="tag otima">★ display</span>' : ""}
+          ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos}</span>` : ""; })()}
         </div>
         <div class="qtd">${v.quantidade || 0}🍾</div>
       </div>`;
@@ -208,6 +209,7 @@ function preencherForm(v) {
   $("#f-posicao-nota").value = v.posicao?.posicaoNota || "";
   $("#f-display").checked = !!v.display;
   $("#f-desejo").checked = !!v.desejo;
+  $("#f-premiacoes").value = premiacoesParaTexto(v.premiacoes);
   $("#f-notas").value = v.notas || "";
   atualizarModoDesejo();
   // Reconstrói a foto (inclui o base64) para que o "Buscar dados (IA)" possa reenviá-la.
@@ -249,6 +251,7 @@ function lerForm() {
     janelaFim: num("#f-janela-fim"),
     janelaOrigem: $("#f-janela-origem").value,
     janelaBase: $("#f-janela-base").dataset.base || "",
+    premiacoes: parsePremiacoes($("#f-premiacoes").value),
     posicao: {
       porta: Number($("#f-porta").value),
       nivel: $("#f-nivel").value,
@@ -396,6 +399,9 @@ function aplicarExtracao(res) {
     set("#f-janela-fim", res.janela.fim);
     $("#f-janela-origem").value = res.janela.origem || "vazio";
     mostrarBaseJanela(res.janela.base, res.janela.origem);
+  }
+  if (Array.isArray(res.premiacoes) && res.premiacoes.length && !$("#f-premiacoes").value.trim()) {
+    $("#f-premiacoes").value = premiacoesParaTexto(res.premiacoes);
   }
   if (res.observacao) $("#f-notas").value = res.observacao;
   atualizarCamposCondicionais();
@@ -557,6 +563,7 @@ async function abrirDetalhe(id) {
       <h2 style="margin-bottom:.2rem">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</h2>
       <span class="tag ${c.estado}">${rotuloEstado(c.estado)}</span>
       ${v.display ? '<span class="tag otima">★ display</span>' : ""}
+      ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos} ${esc(m.critico)}</span>` : ""; })()}
       <p class="dica" style="margin-top:.4rem">${esc(c.texto)}</p>
     </div>
     <div class="cartao">
@@ -565,6 +572,7 @@ async function abrirDetalhe(id) {
       ${linha("Uvas", esc((v.uvas || []).join(", ")) || "—")}
       ${linha("Tipo / formato", `${v.tipo} · ${v.formato}${v.formato === "outro" ? " (" + esc(v.formatoOutro) + ")" : ""}`)}
       ${linha("Garrafas", v.quantidade ?? 0)}
+      ${(v.premiacoes && v.premiacoes.length) ? linha("Premiações", premiacoesTexto(v.premiacoes)) : ""}
       ${linha("Preço", precoTexto(v.preco))}
       ${precoExtra(v)}
       ${precoOrigemBloco(v)}
@@ -707,6 +715,27 @@ function precoOrigemBloco(v) {
 }
 
 // Textos de apoio para o detalhe.
+// —— Premiações (notas de críticos) ——
+// Texto "James Suckling 97, Robert Parker 95" → [{critico, pontos}].
+function parsePremiacoes(texto) {
+  return texto.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean).map((chunk) => {
+    const m = chunk.match(/^(.*?)[\s:–-]*?(\d{2,3})\s*(?:pts?\.?|pontos?)?$/i);
+    if (m && m[2]) return { critico: m[1].trim().replace(/[\s:–-]+$/, "").trim(), pontos: Number(m[2]) };
+    return { critico: chunk, pontos: null };
+  });
+}
+function premiacoesParaTexto(arr) {
+  return (arr || []).map((p) => (p.pontos != null ? `${p.critico} ${p.pontos}` : p.critico)).join(", ");
+}
+function melhorNota(arr) {
+  const comNota = (arr || []).filter((p) => typeof p.pontos === "number");
+  if (!comNota.length) return null;
+  return comNota.reduce((a, b) => (b.pontos > a.pontos ? b : a));
+}
+function premiacoesTexto(arr) {
+  return (arr || []).map((p) => (p.pontos != null ? `<b>${p.pontos}</b> ${esc(p.critico)}` : esc(p.critico))).join(" · ");
+}
+
 function precoTexto(p) {
   if (!p || (p.min == null && p.max == null)) return marcaOrigem("vazio", "não encontrado");
   const faixa = p.min != null && p.max != null
@@ -939,7 +968,7 @@ function montarRascunho(res, dataURL) {
     preco: { min: null, max: null, moeda: "R$", origem: "vazio" },
     janelaInicio: null, janelaFim: null, janelaOrigem: "vazio", janelaBase: "",
     posicao: { porta: 1, nivel: "N1", posicaoNum: null, posicaoNota: "" },
-    display: false, desejo: false, notas: res.observacao || "",
+    display: false, desejo: false, premiacoes: [], notas: res.observacao || "",
     fotoDataURL: dataURL, editadoEm: new Date().toISOString(),
   };
 }

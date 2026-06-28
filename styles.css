@@ -236,6 +236,7 @@ small.dica { display: block; margin-top: .25rem; }
 
 /* Rascunhos (cadastro em lote, aguardando revisão) */
 .tag.rascunho { background: #7a5a1a; color: #ffe9c2; }
+.tag.nota { background: #caa53a; color: #2a1d05; font-weight: 600; }
 .banner-rascunho {
   background: rgba(217,154,58,.16); border: 1px solid var(--estimativa);
   color: var(--texto); border-radius: 12px; padding: .7rem .8rem;
