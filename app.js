@@ -616,6 +616,28 @@ $("#btn-importar").addEventListener("change", async (e) => {
   e.target.value = "";
 });
 
+// —— Carregar catálogo publicado (do GitHub) ——
+$("#btn-carregar-publicado").addEventListener("click", async () => {
+  const status = $("#status-publicado");
+  status.textContent = "🌐 Baixando catálogo publicado…";
+  try {
+    const r = await fetch("./dados/catalogo.json?t=" + Date.now());
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const dados = await r.json();
+    const vinhos = Array.isArray(dados) ? dados : dados.vinhos;
+    if (!Array.isArray(vinhos)) throw new Error("Arquivo sem lista de vinhos.");
+    if (!confirm(`Carregar ${vinhos.length} vinho(s) do catálogo publicado? Isso substitui o catálogo atual deste aparelho.`)) {
+      status.textContent = "";
+      return;
+    }
+    await DB.substituirTudo(vinhos);
+    status.textContent = `✓ ${vinhos.length} vinhos carregados.`;
+    irPara("tela-inicio");
+  } catch (err) {
+    status.textContent = "❌ " + err.message;
+  }
+});
+
 // ————— Apoios de texto —————
 function rotuloEstado(estado) {
   return {
