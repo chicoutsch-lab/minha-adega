@@ -224,6 +224,7 @@ function aplicarFiltros(vinhos) {
           ${tagEstado}
           ${tagDecanter(v)}
           ${tagTaca(v)}
+          ${tagGuarda(v)}
           ${v.display ? '<span class="tag otima">★ display</span>' : ""}
           ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos}</span>` : ""; })()}
         </div>
@@ -696,6 +697,7 @@ async function abrirDetalhe(id) {
       <h2 style="margin-bottom:.2rem">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</h2>
       <span class="tag ${c.estado}">${rotuloEstado(c.estado)}</span>
       ${tagDecanter(v)}
+      ${tagGuarda(v)}
       ${v.display ? '<span class="tag otima">★ display</span>' : ""}
       ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos} ${esc(m.critico)}</span>` : ""; })()}
       <p class="dica" style="margin-top:.4rem">${esc(c.texto)}</p>
@@ -719,6 +721,7 @@ async function abrirDetalhe(id) {
       ${v.notas ? linha("Notas", esc(v.notas)) : ""}
     </div>
     ${minDecant(v) ? `<div class="banner-decanter">🫗 <b>Vale decantar ~${minDecant(v)} min</b> antes de servir — abre os aromas e amacia os taninos.</div>` : ""}
+    ${ganhaComGuarda(v) ? `<div class="banner-guarda">⏳ <b>Ganha com guarda</b> — já está gostoso, mas tem potencial até <b>${v.janelaFim}</b>. Sem pressa: pode descansar e ficar ainda melhor.</div>` : ""}
     ${v.harmonizacao ? `<div class="bloco-harmonizar"><div class="harmonizar-titulo">🍽️ Harmoniza com</div><p>${esc(v.harmonizacao)}</p></div>` : ""}
     <div class="zona-sugerida">💡 Zona sugerida: <b>${sug.nivel}</b> — ${esc(sug.motivo)}</div>
     <div class="divergencias">
@@ -874,6 +877,16 @@ function tacaTexto(v) {
   if (v.taca === "Bordeaux") return "Bordeaux — bojo alto, para tintos encorpados";
   if (v.taca === "Branco") return "Branco — taça menor e mais fechada";
   return v.taca ? esc(v.taca) : "—";
+}
+
+// —— "Ganha com guarda": já dá pra beber, mas ainda vai melhorar muito (longo potencial) ——
+const ANOS_GUARDA_LONGA = 10; // anos de potencial à frente para o vinho merecer o selo
+function ganhaComGuarda(v) {
+  const c = avaliarConsumo(v);
+  return c.estado === "otima" && v.janelaFim && v.janelaFim - ANO_AGORA >= ANOS_GUARDA_LONGA;
+}
+function tagGuarda(v) {
+  return ganhaComGuarda(v) ? `<span class="tag guarda-longa">⏳ ganha com guarda</span>` : "";
 }
 
 // —— Premiações (notas de críticos) ——

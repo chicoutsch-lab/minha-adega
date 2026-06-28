@@ -293,3 +293,10 @@ small.dica { display: block; margin-top: .25rem; }
 /* —— caption do mini-mapa (quebra para a linha de baixo) —— */
 .mini-mapa { flex-wrap: wrap; }
 .mm-cap { flex-basis: 100%; text-align: center; font-size: .7rem; color: var(--texto-fraco); margin-top: .1rem; }
+
+/* —— Selo "ganha com guarda" (azul: pode descansar e melhorar) —— */
+.tag.guarda-longa { background: #2c5a7a; color: #dbeafe; }
+.banner-guarda {
+  background: #16334a; border: 1px solid #2c5a7a; color: #dbeafe;
+  border-radius: 12px; padding: .6rem .8rem; margin: .4rem 0; font-size: .92rem;
+}
