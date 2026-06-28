@@ -574,11 +574,25 @@ $("#btn-salvar-cap").addEventListener("click", async () => {
 $("#btn-exportar").addEventListener("click", async () => {
   const vinhos = await DB.todos();
   const dados = { versao: 1, exportadoEm: new Date().toISOString(), vinhos };
-  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" });
+  const json = JSON.stringify(dados, null, 2);
+  const nome = `adega-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const blob = new Blob([json], { type: "application/json" });
+
+  // No iPhone, a folha de compartilhamento permite AirDrop ou "Salvar em Arquivos".
+  const arquivo = new File([blob], nome, { type: "application/json" });
+  if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+    try {
+      await navigator.share({ files: [arquivo], title: "Backup da Adega" });
+      return;
+    } catch (e) {
+      if (e.name === "AbortError") return; // usuário cancelou — não cai no download
+    }
+  }
+  // Fallback (computador): baixa o arquivo normalmente.
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `adega-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = nome;
   a.click();
   URL.revokeObjectURL(url);
 });
