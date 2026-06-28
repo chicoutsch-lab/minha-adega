@@ -128,6 +128,7 @@ function aplicarFiltros(vinhos) {
           <div class="nome">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
           <div class="meta">${esc(v.produtor) || "—"} · ${formatarEndereco(v.posicao)}</div>
           ${tagEstado}
+          ${tagDecanter(v)}
           ${v.display ? '<span class="tag otima">★ display</span>' : ""}
           ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos}</span>` : ""; })()}
         </div>
@@ -542,7 +543,7 @@ async function renderDesejos() {
         <div>
           <div class="nome">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
           <div class="meta">${esc(v.produtor) || "—"} · ${esc(v.regiao) || "—"}</div>
-          <div class="meta">${precoTexto(v.preco)}</div>
+          <div class="meta">${precoTexto(v.preco)} ${tagDecanter(v)}</div>
         </div>
         <button class="btn-comprei" data-comprei="${v.id}">✅ Comprei</button>
       </div>`)
@@ -597,6 +598,7 @@ async function abrirDetalhe(id) {
     <div>
       <h2 style="margin-bottom:.2rem">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</h2>
       <span class="tag ${c.estado}">${rotuloEstado(c.estado)}</span>
+      ${tagDecanter(v)}
       ${v.display ? '<span class="tag otima">★ display</span>' : ""}
       ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos} ${esc(m.critico)}</span>` : ""; })()}
       <p class="dica" style="margin-top:.4rem">${esc(c.texto)}</p>
@@ -618,6 +620,7 @@ async function abrirDetalhe(id) {
       ${linha("Posição", `${formatarEndereco(v.posicao)}${v.posicao?.posicaoNota ? " · " + esc(v.posicao.posicaoNota) : ""}`)}
       ${v.notas ? linha("Notas", esc(v.notas)) : ""}
     </div>
+    ${minDecant(v) ? `<div class="banner-decanter">🫗 <b>Vale decantar ~${minDecant(v)} min</b> antes de servir — abre os aromas e amacia os taninos.</div>` : ""}
     ${v.harmonizacao ? `<div class="bloco-harmonizar"><div class="harmonizar-titulo">🍽️ Harmoniza com</div><p>${esc(v.harmonizacao)}</p></div>` : ""}
     <div class="zona-sugerida">💡 Zona sugerida: <b>${sug.nivel}</b> — ${esc(sug.motivo)}</div>
     <div class="divergencias">
@@ -753,6 +756,17 @@ function precoOrigemBloco(v) {
 }
 
 // Textos de apoio para o detalhe.
+// —— Decantação: minutos extraídos do tempo de serviço (0 = não precisa) ——
+function minDecant(v) {
+  const m = (v.tempServico || "").match(/decantar\s+(\d+)\s*min/i);
+  return m ? Number(m[1]) : 0;
+}
+// Selo de decanter, bem visível, quando vale decantar.
+function tagDecanter(v) {
+  const min = minDecant(v);
+  return min ? `<span class="tag decantar">🫗 ${min}min</span>` : "";
+}
+
 // —— Premiações (notas de críticos) ——
 // Texto "James Suckling 97, Robert Parker 95" → [{critico, pontos}].
 function parsePremiacoes(texto) {
