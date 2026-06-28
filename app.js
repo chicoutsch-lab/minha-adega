@@ -101,27 +101,33 @@ function renderVisaoGeral(vinhos) {
   renderMiniMapa(vinhos);
 }
 
-// Mini-mapa 2D: as 3 portas com o nível de ocupação. Toque abre o mapa completo.
+// Mini-mapa 2D (visão simulada): tintos nas Portas 1-2, brancos na Porta 3.
+// Por TIPO (não por posição), pra sempre mostrar algo enquanto as posições não estão cravadas.
 function renderMiniMapa(vinhos) {
-  const cap = { 1: 120, 2: 120, 3: 59 }; // capacidade aproximada por porta
-  const portas = [
-    { p: 1, nome: "Porta 1", classe: "tinto" },
-    { p: 2, nome: "Porta 2", classe: "tinto" },
-    { p: 3, nome: "Porta 3", classe: "branco" },
+  let tinto = 0, branco = 0;
+  for (const v of vinhos) {
+    const q = v.quantidade || 0;
+    const t = tipoAmplo(v);
+    if (t === "branco" || t === "rosé") branco += q;
+    else tinto += q; // tinto + fortificado (Porto)
+  }
+  const dist = [
+    { nome: "Porta 1", classe: "tinto", g: Math.ceil(tinto / 2), cap: 120 },
+    { nome: "Porta 2", classe: "tinto", g: Math.floor(tinto / 2), cap: 120 },
+    { nome: "Porta 3", classe: "branco", g: branco, cap: 59 },
   ];
-  $("#mini-mapa").innerHTML = portas
-    .map(({ p, nome, classe }) => {
-      const g = vinhos
-        .filter((v) => Number(v.posicao?.porta) === p)
-        .reduce((s, v) => s + (v.quantidade || 0), 0);
-      const pct = Math.min(100, Math.round((g / cap[p]) * 100));
-      return `
+  $("#mini-mapa").innerHTML =
+    dist
+      .map(({ nome, classe, g, cap }) => {
+        const pct = cap ? Math.min(100, Math.round((g / cap) * 100)) : 0;
+        return `
       <div class="mm-porta ${classe}">
-        <div class="mm-barra"><div class="mm-cheio" style="height:${pct}%"></div></div>
+        <div class="mm-barra"><div class="mm-cheio" style="height:${Math.max(pct, 4)}%"></div></div>
         <div class="mm-rotulo">${nome}<br><b>${g}</b> 🍾</div>
       </div>`;
-    })
-    .join("");
+      })
+      .join("") +
+    `<div class="mm-cap">visão simulada por tipo · toque para o mapa real</div>`;
   $("#mini-mapa").onclick = () => irPara("tela-mapa");
 }
 
