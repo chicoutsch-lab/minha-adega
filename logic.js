@@ -24,7 +24,7 @@ const REGRAS = {
   },
   // Até este preço (no campo de preço do vinho) consideramos "do dia a dia".
   // Vinhos prontos E baratos são os candidatos ideais para o aramado N3.
-  LIMITE_BARATO: 150,
+  LIMITE_BARATO: 100,
   // Cortes de altura no painel de guarda (N1): quanto mais anos até o ponto,
   // mais no alto. Ex.: 8+ anos = bem no alto; 4-7 = parte de cima; <4 = embaixo.
   ALTURA_GUARDA: { alto: 8, meio: 4 },
