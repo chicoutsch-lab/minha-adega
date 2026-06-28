@@ -51,6 +51,12 @@
         <option value="tinto">Tinto</option>
         <option value="branco">Branco</option>
       </select>
+      <select id="filtro-corpo">
+        <option value="">Qualquer corpo</option>
+        <option value="leve">Leve</option>
+        <option value="médio">Médio</option>
+        <option value="encorpado">Encorpado</option>
+      </select>
       <select id="filtro-porta">
         <option value="">Todas as portas</option>
         <option value="1">Porta 1 (tinto)</option>
@@ -186,6 +192,22 @@
       </div>
       <label id="campo-posicao-num" class="oculto">Posição (número) <input id="f-posicao-num" type="number" inputmode="numeric" /></label>
       <label>Nota de posição <input id="f-posicao-nota" type="text" placeholder="ex.: caixa OWC de 6" /></label>
+    </fieldset>
+
+    <!-- Perfil de serviço -->
+    <fieldset class="cartao">
+      <legend>Corpo & serviço</legend>
+      <div class="dois">
+        <label>Corpo
+          <select id="f-corpo">
+            <option value="">—</option>
+            <option value="leve">Leve</option>
+            <option value="médio">Médio</option>
+            <option value="encorpado">Encorpado</option>
+          </select>
+        </label>
+        <label>🌡️ Servir <input id="f-temp-servico" type="text" placeholder="ex.: 16-18°C · decantar 60 min" /></label>
+      </div>
     </fieldset>
 
     <!-- Harmonização -->

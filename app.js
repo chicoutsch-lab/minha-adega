@@ -84,11 +84,13 @@ function aplicarFiltros(vinhos) {
   const fe = $("#filtro-estado").value;
   const ft = $("#filtro-tipo").value;
   const fp = $("#filtro-porta").value;
+  const fc = $("#filtro-corpo").value;
 
   const filtrados = vinhos.filter((v) => {
     const c = avaliarConsumo(v);
     if (fe && c.estado !== fe) return false;
     if (ft && v.tipo !== ft) return false;
+    if (fc && v.corpo !== fc) return false;
     if (fp && String(v.posicao?.porta) !== fp) return false;
     if (termo) {
       const txt = [v.nome, v.produtor, (v.uvas || []).join(" "), v.regiao]
@@ -143,7 +145,7 @@ document.addEventListener("click", (e) => {
   }
 });
 
-["#busca", "#filtro-estado", "#filtro-tipo", "#filtro-porta"].forEach((s) =>
+["#busca", "#filtro-estado", "#filtro-tipo", "#filtro-corpo", "#filtro-porta"].forEach((s) =>
   $(s).addEventListener("input", async () => aplicarFiltros(await DB.todos()))
 );
 
@@ -210,6 +212,8 @@ function preencherForm(v) {
   $("#f-display").checked = !!v.display;
   $("#f-desejo").checked = !!v.desejo;
   $("#f-premiacoes").value = premiacoesParaTexto(v.premiacoes);
+  $("#f-corpo").value = v.corpo || "";
+  $("#f-temp-servico").value = v.tempServico || "";
   $("#f-harmonizacao").value = v.harmonizacao || "";
   $("#f-notas").value = v.notas || "";
   atualizarModoDesejo();
@@ -261,6 +265,8 @@ function lerForm() {
     },
     display: $("#f-display").checked,
     desejo: $("#f-desejo").checked,
+    corpo: $("#f-corpo").value,
+    tempServico: $("#f-temp-servico").value.trim(),
     harmonizacao: $("#f-harmonizacao").value.trim(),
     notas: $("#f-notas").value.trim(),
     fotoDataURL: fotoAtual.dataURL,
@@ -600,6 +606,8 @@ async function abrirDetalhe(id) {
       ${linha("Região / País", `${esc(v.regiao) || "—"} · ${esc(v.pais) || "—"}`)}
       ${linha("Uvas", esc((v.uvas || []).join(", ")) || "—")}
       ${linha("Tipo / formato", `${v.tipo} · ${v.formato}${v.formato === "outro" ? " (" + esc(v.formatoOutro) + ")" : ""}`)}
+      ${v.corpo ? linha("Corpo", `<b>${esc(v.corpo)}</b>`) : ""}
+      ${v.tempServico ? linha("🌡️ Servir", esc(v.tempServico)) : ""}
       ${linha("Garrafas", v.quantidade ?? 0)}
       ${(v.premiacoes && v.premiacoes.length) ? linha("Premiações", premiacoesTexto(v.premiacoes)) : ""}
       ${linha("Preço", precoTexto(v.preco))}
@@ -998,7 +1006,7 @@ function montarRascunho(res, dataURL) {
     preco: { min: null, max: null, moeda: "R$", origem: "vazio" },
     janelaInicio: null, janelaFim: null, janelaOrigem: "vazio", janelaBase: "",
     posicao: { porta: 1, nivel: "N1", posicaoNum: null, posicaoNota: "" },
-    display: false, desejo: false, premiacoes: [], harmonizacao: "", notas: res.observacao || "",
+    display: false, desejo: false, premiacoes: [], corpo: "", tempServico: "", harmonizacao: "", notas: res.observacao || "",
     fotoDataURL: dataURL, editadoEm: new Date().toISOString(),
   };
 }
