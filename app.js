@@ -8,6 +8,10 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
+// Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
+// para você conferir num relance se o iPhone já pegou a versão nova.
+const APP_VERSION = "v24";
+
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
 
@@ -1299,4 +1303,5 @@ $("#nav-mapa").addEventListener("click", () => { Mapa3D.desmontar(); setModoMapa
 // ————— Início de tudo —————
 montarSelecaoPosicao();
 $("[data-ir='tela-ajustes']").addEventListener("click", carregarAjustes);
+if ($("#app-versao")) $("#app-versao").textContent = `Versão do app: ${APP_VERSION} · recarregue se estiver diferente`;
 renderInicio();
