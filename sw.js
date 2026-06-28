@@ -7,7 +7,7 @@
   Sempre que você ALTERAR o código do app, suba o número da versão abaixo
   (CACHE) para o aparelho buscar os arquivos novos.
 */
-const CACHE = "adega-v25";
+const CACHE = "adega-v26";
 const ARQUIVOS = [
   "./",
   "./index.html",
@@ -46,6 +46,11 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (url.hostname.endsWith("anthropic.com") || url.hostname.endsWith("openai.com")) {
     return; // deixa o navegador tratar normalmente (sempre rede)
+  }
+  // O catálogo é DADO, não código: sempre da rede, nunca do cache.
+  // Corrige o "Carregar publicado" trazer versão velha no iOS.
+  if (url.pathname.endsWith("/dados/catalogo.json")) {
+    return;
   }
   e.respondWith(
     caches.match(e.request).then((resp) => resp || fetch(e.request))
