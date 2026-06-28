@@ -70,6 +70,22 @@ PASSOS:
 Foque no PREÇO; os demais campos pode deixar vazios.
 ${FORMATO}`;
 
+  // Modo FOCADO EM PREÇO NA ORIGEM: preço de prateleira no país de origem do vinho.
+  const INSTRUCAO_PRECO_ORIGEM = `Você é especialista em vinhos. Encontre o PREÇO DE VAREJO no PAÍS DE ORIGEM do vinho
+(ou no maior mercado dessa origem), para comparar com o preço brasileiro. NÃO é o custo de importar.
+PASSOS:
+1) Identifique o país de origem (Argentina, Chile, França, Itália, Espanha, Portugal, EUA…).
+2) Pesquise o preço de varejo LÁ: Wine-Searcher (preço médio/mín global), idealwine/Millésima (Europa),
+   wine.com/Total Wine (EUA), lojas locais (Argentina/Chile).
+3) Devolva o preço em MOEDA LOCAL (US$, €, AR$, CLP$…) e uma conversão APROXIMADA para reais (brlAprox),
+   usando o câmbio atual aproximado.
+4) "fonteTipo": "fonte" se achou loja/Wine-Searcher claro; "estimativa" se deduziu/converteu; "vazio" se nada.
+5) NÃO some impostos de importação — é só o preço de prateleira na origem.
+Responda SOMENTE com este JSON, sem texto fora:
+{
+  "origem": { "min": null, "max": null, "moeda": "", "pais": "", "brlAprox": null, "fonteTipo": "vazio", "base": "" }
+}`;
+
   function extrairJSON(texto) {
     const ini = texto.indexOf("{");
     const fim = texto.lastIndexOf("}");
@@ -168,6 +184,7 @@ ${FORMATO}`;
       let instrucao, busca;
       if (foco === "janela") { instrucao = INSTRUCAO_JANELA; busca = true; }
       else if (foco === "preco") { instrucao = INSTRUCAO_PRECO; busca = true; }
+      else if (foco === "precoOrigem") { instrucao = INSTRUCAO_PRECO_ORIGEM; busca = true; }
       else if (foco === "rapido" || comBusca === false) { instrucao = INSTRUCAO_RAPIDA; busca = false; }
       else { instrucao = INSTRUCAO_COMPLETA; busca = true; }
       const args = { apiKey, modelo, texto, fotoBase64, fotoMime, comBusca: busca, instrucao };

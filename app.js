@@ -470,11 +470,15 @@ $("#btn-janela").addEventListener("click", async () => {
 // —— Salvar ——
 $("#form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const v = lerForm();
-  if (!v.nome && !v.produtor) {
+  const dados = lerForm();
+  if (!dados.nome && !dados.produtor) {
     alert("Dê pelo menos um nome ou produtor ao vinho.");
     return;
   }
+  // Mescla com o vinho existente para não perder campos fora do formulário
+  // (preço atualizado, preço na origem, variação, data de criação…).
+  const existente = dados.id ? (await DB.todos()).find((x) => x.id === dados.id) : null;
+  const v = { ...(existente || {}), ...dados };
   await DB.salvar(v);
   if (v.desejo) { irPara("tela-desejos"); renderDesejos(); }
   else irPara("tela-inicio");
@@ -563,6 +567,7 @@ async function abrirDetalhe(id) {
       ${linha("Garrafas", v.quantidade ?? 0)}
       ${linha("Preço", precoTexto(v.preco))}
       ${precoExtra(v)}
+      ${precoOrigemBloco(v)}
       ${linha("Janela", janelaTexto(v))}
       ${v.janelaBase ? `<p class="base-janela">${v.janelaOrigem === "fonte" ? "✓ Fonte: " : v.janelaOrigem === "estimativa" ? "~ Estimativa: " : ""}${esc(v.janelaBase)}</p>` : ""}
       ${linha("Posição", `${formatarEndereco(v.posicao)}${v.posicao?.posicaoNota ? " · " + esc(v.posicao.posicaoNota) : ""}`)}
@@ -575,6 +580,7 @@ async function abrirDetalhe(id) {
     <div class="acoes">
       <button class="btn-principal" id="det-bebi">🍷 Bebi uma (-1)</button>
       <button class="btn-secundario" id="det-preco">🔄 Atualizar preço</button>
+      <button class="btn-secundario" id="det-origem">🌍 Preço na origem</button>
       <button class="btn-secundario" id="det-editar">✏️ Editar</button>
     </div>`;
 
@@ -584,6 +590,38 @@ async function abrirDetalhe(id) {
     abrirDetalhe(id);
   };
   $("#det-editar").onclick = () => abrirFormEdicao(id);
+
+  // Preço na origem: preço de prateleira no país de origem (comparação).
+  $("#det-origem").onclick = async () => {
+    const provedor = (await DB.lerConfig("provedor")) || "anthropic";
+    const apiKey = await DB.lerConfig("apiKey");
+    const modelo = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
+    if (!apiKey) { alert("Configure sua chave de API nos Ajustes."); return; }
+    const btn = $("#det-origem");
+    btn.disabled = true; btn.textContent = "🔎 Buscando…";
+    const desc = [v.nome, v.produtor, v.safra, (v.uvas || []).join("/"), v.regiao, v.pais].filter(Boolean).join(" · ");
+    try {
+      const res = await IA.extrair({ provedor, apiKey, modelo, foco: "precoOrigem",
+        texto: `Vinho: ${desc}. Qual o preço de varejo no país de origem?` });
+      const o = res.origem || {};
+      if (o.min != null || o.max != null || o.brlAprox != null) {
+        v.precoOrigem = {
+          min: o.min ?? null, max: o.max ?? null, moeda: o.moeda || "",
+          pais: o.pais || "", brlAprox: o.brlAprox ?? null,
+          origem: o.fonteTipo || "estimativa", base: o.base || "",
+          atualizadoEm: new Date().toISOString().slice(0, 10),
+        };
+        await DB.salvar(v);
+        abrirDetalhe(id);
+      } else {
+        alert("Não encontrei o preço na origem.");
+        btn.disabled = false; btn.textContent = "🌍 Preço na origem";
+      }
+    } catch (err) {
+      alert("Erro ao buscar preço na origem: " + err.message);
+      btn.disabled = false; btn.textContent = "🌍 Preço na origem";
+    }
+  };
 
   // Acompanhar preço: busca o preço atual no varejo BR e guarda data + variação.
   $("#det-preco").onclick = async () => {
@@ -635,6 +673,37 @@ function variacaoPreco(v) {
   if (atu > ant) return `↑ subiu (era R$ ${ant})`;
   if (atu < ant) return `↓ caiu (era R$ ${ant})`;
   return "→ estável";
+}
+
+// Bloco "preço na origem": valor lá fora, conversão aproximada e % de diferença.
+function precoOrigemBloco(v) {
+  const o = v.precoOrigem;
+  if (!o) return "";
+  const moeda = esc(o.moeda || "");
+  const faixa = o.min != null && o.max != null
+    ? `${moeda} ${o.min}–${o.max}`
+    : (o.min != null || o.max != null ? `${moeda} ${o.min ?? o.max}` : "—");
+  const brl = o.brlAprox != null ? ` <span class="dica">(~R$ ${o.brlAprox})</span>` : "";
+  const selo = o.origem === "fonte"
+    ? '<span class="tag otima">✓ fonte</span>'
+    : o.origem === "estimativa" ? '<span class="tag estimativa">~ estimativa</span>' : "";
+
+  let diff = "";
+  const brBR = valorRep(v.preco), org = o.brlAprox;
+  if (brBR != null && org != null && brBR > 0) {
+    const pct = Math.round((1 - org / brBR) * 100);
+    diff = pct > 0
+      ? `<b>💸 ~${pct}% mais barato na origem</b>`
+      : pct < 0 ? `~${-pct}% mais caro na origem` : "preço parecido";
+  }
+  return `
+    <div class="bloco-origem">
+      <div class="linha-dado"><span class="rotulo">Na origem${o.pais ? ` (${esc(o.pais)})` : ""}</span>
+        <span class="valor">${faixa}${brl} ${selo}</span></div>
+      ${diff ? `<p class="dica" style="margin:.1rem 0">${diff}</p>` : ""}
+      ${o.base ? `<p class="base-janela">${o.origem === "fonte" ? "✓ Fonte: " : "~ "}${esc(o.base)}</p>` : ""}
+      <p class="dica">Preço de prateleira na origem — <b>não</b> inclui imposto de importação. É só uma noção para comparar.</p>
+    </div>`;
 }
 
 // Textos de apoio para o detalhe.

@@ -114,6 +114,10 @@ legend { padding: 0 .4rem; color: var(--vinho-claro); font-weight: 600; }
 .dica { font-size: .78rem; color: var(--texto-fraco); margin: 0; }
 small.dica { display: block; margin-top: .25rem; }
 
+/* ===== Preço na origem ===== */
+.bloco-origem { background: rgba(255,255,255,.04); border: 1px solid var(--linha); border-radius: 10px; padding: .4rem .65rem; margin: .15rem 0 .45rem; }
+.bloco-origem .linha-dado { border: none; padding: .15rem 0; }
+
 /* ===== Lista de desejos ===== */
 .botao-desejos {
   width: 100%; text-align: left; background: var(--cartao); color: var(--texto);
