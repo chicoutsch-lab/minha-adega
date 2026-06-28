@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v24";
+const APP_VERSION = "v25";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -884,10 +884,15 @@ function tacaTexto(v) {
 }
 
 // —— "Ganha com guarda": já dá pra beber, mas ainda vai melhorar muito (longo potencial) ——
-const ANOS_GUARDA_LONGA = 10; // anos de potencial à frente para o vinho merecer o selo
+const ANOS_GUARDA_LONGA = 7; // anos de potencial à frente para o vinho merecer o selo
 function ganhaComGuarda(v) {
   const c = avaliarConsumo(v);
-  return c.estado === "otima" && v.janelaFim && v.janelaFim - ANO_AGORA >= ANOS_GUARDA_LONGA;
+  if (c.estado !== "otima") return false;
+  if (!v.janelaFim || v.janelaFim - ANO_AGORA < ANOS_GUARDA_LONGA) return false;
+  // "na dúvida guarda — se for coisa boa": só marca vinho nobre (não baratinho)
+  // OU bem pontuado (nota 90+). Evita selar um tinto do dia a dia.
+  const m = melhorNota(v.premiacoes);
+  return !ehBarato(v) || (m && m.pontos >= 90);
 }
 function tagGuarda(v) {
   return ganhaComGuarda(v) ? `<span class="tag guarda-longa">⏳ ganha com guarda</span>` : "";
