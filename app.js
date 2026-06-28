@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v27";
+const APP_VERSION = "v28";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -80,6 +80,11 @@ function renderVisaoGeral(vinhos) {
   // "Beber em 12 meses": a janela termina até o ano que vem.
   const beber12 = vinhos.filter((v) => v.janelaFim && v.janelaFim <= ANO_AGORA + 1).length;
 
+  // Honestidade: quanto das janelas de consumo é ESTIMATIVA da IA (chute) vs fonte real.
+  const comJanela = vinhos.filter((v) => v.janelaFim);
+  const estim = comJanela.filter((v) => v.janelaOrigem !== "fonte").length;
+  const pctEstim = comJanela.length ? Math.round((100 * estim) / comJanela.length) : 0;
+
   $("#visao-geral").innerHTML = `
     <div class="vg-topo">
       <div class="vg-grande"><b>${garrafas}</b><span>garrafas na adega</span></div>
@@ -92,7 +97,8 @@ function renderVisaoGeral(vinhos) {
     <div class="vg-cards">
       <div class="vg-card"><b>${moedaBR(valor)}</b><span>valor na adega</span></div>
       <div class="vg-card clicavel" id="vg-beber"><b>⏳ ${beber12}</b><span>beber em 12 meses ›</span></div>
-    </div>`;
+    </div>
+    ${pctEstim ? `<p class="vg-honesto">ℹ️ ${pctEstim}% das janelas de consumo são <b>estimativas da IA</b> (não confirmadas). Trate como palpite, não verdade.</p>` : ""}`;
 
   const btnBeber = $("#vg-beber");
   if (btnBeber)
@@ -725,7 +731,7 @@ async function abrirDetalhe(id) {
       ${v.notas ? linha("Notas", esc(v.notas)) : ""}
     </div>
     ${minDecant(v) ? `<div class="banner-decanter">🫗 <b>Vale decantar ~${minDecant(v)} min</b> antes de servir — abre os aromas e amacia os taninos.</div>` : ""}
-    ${ganhaComGuarda(v) ? `<div class="banner-guarda">⏳ <b>Ganha com guarda</b> — já está gostoso, mas tem potencial até <b>${v.janelaFim}</b>. Sem pressa: pode descansar e ficar ainda melhor.</div>` : ""}
+    ${ganhaComGuarda(v) ? `<div class="banner-guarda">⏳ <b>Ganha com guarda</b> — já está gostoso, mas tem potencial até <b>${v.janelaFim}</b>.${v.janelaOrigem === "fonte" ? " Sem pressa." : ` <span class="estimado-aviso">⚠️ janela ESTIMADA pela IA, não confirmada — confira antes de guardar muito.</span>`}</div>` : ""}
     ${v.harmonizacao ? `<div class="bloco-harmonizar"><div class="harmonizar-titulo">🍽️ Harmoniza com</div><p>${esc(v.harmonizacao)}</p></div>` : ""}
     <div class="zona-sugerida">💡 Zona sugerida: <b>${sug.nivel}</b> — ${esc(sug.motivo)}</div>
     <div class="divergencias">
@@ -895,7 +901,13 @@ function ganhaComGuarda(v) {
   return !ehBarato(v) || (m && m.pontos >= 90);
 }
 function tagGuarda(v) {
-  return ganhaComGuarda(v) ? `<span class="tag guarda-longa">⏳ ganha com guarda</span>` : "";
+  if (!ganhaComGuarda(v)) return "";
+  // Honestidade: se a janela é ESTIMATIVA (chute da IA), o selo de "guarde" vem
+  // tracejado e com "~" — não é instrução confiante, é palpite. Só fica sólido com fonte real.
+  const estimado = v.janelaOrigem !== "fonte";
+  return estimado
+    ? `<span class="tag guarda-longa estimado" title="Potencial ESTIMADO pela IA — não confirmado">⏳ ~guarda?</span>`
+    : `<span class="tag guarda-longa">⏳ ganha com guarda</span>`;
 }
 
 // —— Premiações (notas de críticos) ——
