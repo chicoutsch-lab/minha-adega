@@ -37,8 +37,11 @@
 
   <!-- DESTAQUE MÁXIMO: vinhos saindo da janela, ordenados por urgência -->
   <div id="bloco-alertas" class="bloco-alertas">
-    <h2>🍷 Beber em breve</h2>
-    <div id="alertas"></div>
+    <button type="button" id="alertas-toggle" class="alertas-toggle" aria-expanded="false">
+      <span>🍷 Beber em breve <span id="alertas-contador" class="alertas-contador"></span></span>
+      <span class="alertas-chevron" aria-hidden="true">›</span>
+    </button>
+    <div id="alertas" class="alertas-corpo oculto"></div>
   </div>
 
   <button type="button" id="ir-desejos" class="botao-desejos">🛒 Lista de desejos <span id="desejos-contador"></span> ›</button>

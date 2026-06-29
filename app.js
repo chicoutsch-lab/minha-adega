@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v33";
+const APP_VERSION = "v34";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -167,6 +167,11 @@ async function renderInicio() {
     .sort((a, b) => b.c.urgencia - a.c.urgencia);
 
   const bloco = $("#bloco-alertas");
+  const contAlertas = $("#alertas-contador");
+  if (contAlertas) {
+    contAlertas.textContent = urgentes.length;
+    contAlertas.classList.toggle("zero", urgentes.length === 0);
+  }
   if (urgentes.length === 0) {
     bloco.classList.add("vazio");
     $("#alertas").innerHTML =
@@ -688,6 +693,10 @@ $("#lista-desejos").addEventListener("click", async (e) => {
   if (card) abrirFormEdicao(card.dataset.id);
 });
 
+$("#alertas-toggle").addEventListener("click", () => {
+  const escondido = $("#alertas").classList.toggle("oculto"); // true = agora fechado
+  $("#alertas-toggle").setAttribute("aria-expanded", String(!escondido));
+});
 $("#ir-desejos").addEventListener("click", () => { irPara("tela-desejos"); renderDesejos(); });
 $("#add-desejo").addEventListener("click", () => abrirFormNovo(true));
 

@@ -56,6 +56,13 @@ h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
   padding: 1rem; margin: 1rem 0;
 }
 .bloco-alertas.vazio { opacity: .7; }
+/* "Beber em breve" recolhível: título vira botão de largura total */
+.alertas-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: .5rem; background: none; border: none; color: var(--texto); font-size: 1.05rem; font-weight: 700; cursor: pointer; padding: .15rem 0; text-align: left; }
+.alertas-contador { font-size: .78rem; font-weight: 700; color: #fff; background: var(--vinho); border-radius: 999px; padding: .05rem .5rem; margin-left: .2rem; vertical-align: middle; }
+.alertas-contador.zero { background: var(--texto-fraco); }
+.alertas-chevron { color: var(--texto-fraco); font-size: 1.3rem; line-height: 1; transition: transform .15s ease; }
+.alertas-toggle[aria-expanded="true"] .alertas-chevron { transform: rotate(90deg); }
+.alertas-corpo { margin-top: .5rem; }
 .alerta-item {
   display: flex; align-items: center; gap: .6rem;
   background: rgba(0,0,0,.2); border-radius: 10px;
