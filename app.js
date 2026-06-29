@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v31";
+const APP_VERSION = "v32";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -31,6 +31,14 @@ function irPara(idTela) {
 }
 $$("[data-ir]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.ir)));
 $("#nav-adicionar").addEventListener("click", () => abrirFormNovo());
+
+// ————— Alternar tema claro/escuro (salvo no aparelho) —————
+$("#btn-tema").addEventListener("click", () => {
+  const eraClaro = document.documentElement.getAttribute("data-tema") === "claro";
+  const novo = eraClaro ? "escuro" : "claro";
+  document.documentElement.setAttribute("data-tema", novo);
+  try { localStorage.setItem("tema", novo); } catch (e) {}
+});
 
 // ————— Preenche os seletores de porta e nível a partir das regras —————
 function montarSelecaoPosicao() {

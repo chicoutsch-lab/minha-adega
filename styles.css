@@ -314,3 +314,25 @@ small.dica { display: block; margin-top: .25rem; }
 /* —— Refino: estado estimado + números tabulares —— */
 .tag.janela-est { border: 1px dashed rgba(255,255,255,.4); }
 .vg-grande b, .vg-card b, .qtd { font-variant-numeric: tabular-nums; }
+
+/* ===== TEMA CLARO (alternável no cabeçalho 🌗) ===== */
+:root[data-tema="claro"] {
+  --fundo: #f4f0ea;
+  --cartao: #ffffff;
+  --cartao-2: #efe8e0;
+  --texto: #261419;
+  --texto-fraco: #6e615b;
+  --vinho: #8c1e32;
+  --vinho-claro: #97243a;
+  --linha: #e3dbd1;
+}
+:root[data-tema="claro"] .bloco-alertas { background: #fbedef; border-color: var(--vinho); }
+:root[data-tema="claro"] .alerta-item { background: rgba(140,30,50,.06); }
+:root[data-tema="claro"] .bloco-origem { background: rgba(0,0,0,.03); }
+:root[data-tema="claro"] input:focus, :root[data-tema="claro"] select:focus, :root[data-tema="claro"] textarea:focus { outline-color: var(--vinho); }
+
+/* Foto do rótulo emoldurada — destaca a garrafa em qualquer fundo (resolve o rótulo no claro) */
+.cartao-vinho img, .cv-foto { border: 1px solid var(--linha); }
+
+/* Botão de alternar tema */
+#btn-tema { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 .2rem; line-height: 1; }

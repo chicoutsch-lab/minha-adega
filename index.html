@@ -16,6 +16,10 @@
   <link rel="apple-touch-icon" href="./icons/icon-180.png" />
 
   <link rel="stylesheet" href="./styles.css" />
+  <script>
+    /* Aplica o tema salvo (claro/escuro) ANTES de desenhar — evita "piscar". */
+    try { document.documentElement.setAttribute("data-tema", localStorage.getItem("tema") || "escuro"); } catch (e) {}
+  </script>
 </head>
 <body>
 
@@ -24,6 +28,7 @@
   <header class="cabecalho">
     <h1>Minha Adega</h1>
     <span id="contador" class="contador"></span>
+    <button id="btn-tema" title="Alternar claro/escuro" aria-label="Alternar tema claro/escuro">🌗</button>
   </header>
 
   <!-- VISÃO GERAL DA ADEGA: totais + valor + mini-mapa -->
