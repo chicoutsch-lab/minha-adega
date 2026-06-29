@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v28";
+const APP_VERSION = "v29";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -221,22 +221,26 @@ function aplicarFiltros(vinhos) {
   lista.innerHTML = aviso + filtrados
     .map((v) => {
       const c = avaliarConsumo(v);
-      const foto = v.fotoDataURL ? `<img src="${v.fotoDataURL}" alt="">` : `<img alt="">`;
+      const foto = v.fotoDataURL
+        ? `<img class="cv-foto" src="${v.fotoDataURL}" alt="">`
+        : `<div class="cv-foto cv-sem" aria-hidden="true">🍷</div>`;
       const tagEstado = v.rascunho
         ? '<span class="tag rascunho">📋 revisar</span>'
         : `<span class="tag ${c.estado}">${rotuloEstado(c.estado)}</span>`;
       return `
       <div class="cartao-vinho" data-id="${v.id}">
         ${foto}
-        <div>
+        <div class="cv-corpo">
           <div class="nome">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
           <div class="meta">${esc(v.produtor) || "—"} · ${formatarEndereco(v.posicao)}</div>
-          ${tagEstado}
-          ${tagDecanter(v)}
-          ${tagTaca(v)}
-          ${tagGuarda(v)}
-          ${v.display ? '<span class="tag otima">★ display</span>' : ""}
-          ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos}</span>` : ""; })()}
+          <div class="selos">
+            ${tagEstado}
+            ${tagDecanter(v)}
+            ${tagTaca(v)}
+            ${tagGuarda(v)}
+            ${v.display ? '<span class="tag otima">★ display</span>' : ""}
+            ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos}</span>` : ""; })()}
+          </div>
         </div>
         <div class="qtd">${v.quantidade || 0}🍾</div>
       </div>`;

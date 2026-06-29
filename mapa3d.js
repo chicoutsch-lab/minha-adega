@@ -253,14 +253,19 @@ const Mapa3D = (() => {
     cont.innerHTML = "";
     cont.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.0);
     dir.position.set(4, 9, 7);
     scene.add(dir);
+    // Luz quente lateral (clima de adega) — dá volume e brilho às garrafas.
+    const quente = new THREE.DirectionalLight(0xffd9a0, 0.35);
+    quente.position.set(-6, 3, 4);
+    scene.add(quente);
 
     grupo = new THREE.Group();
-    grupo.position.y = -3;     // centraliza a adega na vertical
-    grupo.rotation.y = -0.5;   // começa levemente girada, para dar noção de 3D
+    grupo.position.y = -3;       // centraliza a adega na vertical
+    grupo.rotation.y = -0.7;     // vista 3/4: mais noção de profundidade
+    grupo.rotation.x = 0.12;     // leve inclinação para cima
     scene.add(grupo);
 
     construir(modelo);
