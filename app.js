@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v29";
+const APP_VERSION = "v30";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -173,7 +173,7 @@ async function renderInicio() {
           <div class="titulo">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
           <div class="sub">${esc(c.texto)} · ${formatarEndereco(v.posicao)}</div>
         </div>
-        <span class="tag ${c.estado}" style="margin-left:auto">${rotuloEstado(c.estado)}</span>
+        <span style="margin-left:auto">${seloEstado(v, c)}</span>
       </div>`
       )
       .join("");
@@ -226,7 +226,10 @@ function aplicarFiltros(vinhos) {
         : `<div class="cv-foto cv-sem" aria-hidden="true">🍷</div>`;
       const tagEstado = v.rascunho
         ? '<span class="tag rascunho">📋 revisar</span>'
-        : `<span class="tag ${c.estado}">${rotuloEstado(c.estado)}</span>`;
+        : seloEstado(v, c);
+      // No card só os selos que importam (estado + guarda + nota); o resto
+      // (taça, decantar, display) fica no detalhe — evita o "arco-íris".
+      const nota = melhorNota(v.premiacoes);
       return `
       <div class="cartao-vinho" data-id="${v.id}">
         ${foto}
@@ -235,11 +238,8 @@ function aplicarFiltros(vinhos) {
           <div class="meta">${esc(v.produtor) || "—"} · ${formatarEndereco(v.posicao)}</div>
           <div class="selos">
             ${tagEstado}
-            ${tagDecanter(v)}
-            ${tagTaca(v)}
             ${tagGuarda(v)}
-            ${v.display ? '<span class="tag otima">★ display</span>' : ""}
-            ${(() => { const m = melhorNota(v.premiacoes); return m ? `<span class="tag nota">🏆 ${m.pontos}</span>` : ""; })()}
+            ${nota ? `<span class="tag nota">🏆 ${nota.pontos}</span>` : ""}
           </div>
         </div>
         <div class="qtd">${v.quantidade || 0}🍾</div>
@@ -651,11 +651,11 @@ async function renderDesejos() {
   cont.innerHTML = desejos
     .map((v) => `
       <div class="cartao-vinho" data-id="${v.id}">
-        ${v.fotoDataURL ? `<img src="${v.fotoDataURL}" alt="">` : `<img alt="">`}
-        <div>
+        ${v.fotoDataURL ? `<img class="cv-foto" src="${v.fotoDataURL}" alt="">` : `<div class="cv-foto cv-sem" aria-hidden="true">🍷</div>`}
+        <div class="cv-corpo">
           <div class="nome">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
           <div class="meta">${esc(v.produtor) || "—"} · ${esc(v.regiao) || "—"}</div>
-          <div class="meta">${precoTexto(v.preco)} ${tagDecanter(v)}</div>
+          <div class="meta">${precoTexto(v.preco)}</div>
         </div>
         <button class="btn-comprei" data-comprei="${v.id}">✅ Comprei</button>
       </div>`)
@@ -709,7 +709,7 @@ async function abrirDetalhe(id) {
     ${v.fotoDataURL ? `<img class="foto-grande" src="${v.fotoDataURL}" alt="">` : ""}
     <div>
       <h2 style="margin-bottom:.2rem">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</h2>
-      <span class="tag ${c.estado}">${rotuloEstado(c.estado)}</span>
+      ${seloEstado(v, c)}
       ${tagDecanter(v)}
       ${tagGuarda(v)}
       ${v.display ? '<span class="tag otima">★ display</span>' : ""}
@@ -1089,6 +1089,13 @@ function rotuloEstado(estado) {
     sem_janela: "Sem janela",
   }[estado] || estado;
 }
+// Honestidade: o estado de consumo vem da janela — e 77% das janelas são estimativa.
+function janelaEstimada(v) { return !!(v.janelaFim && v.janelaOrigem !== "fonte"); }
+// Selo de estado, com "~" e tracejado quando a janela (logo o estado) é palpite da IA.
+function seloEstado(v, c) {
+  const est = janelaEstimada(v);
+  return `<span class="tag ${c.estado}${est ? " janela-est" : ""}"${est ? ' title="Estado inferido de uma janela ESTIMADA pela IA — não confirmada"' : ""}>${est ? "~" : ""}${rotuloEstado(c.estado)}</span>`;
+}
 // Escapa texto para não quebrar o HTML (segurança básica).
 function esc(s) {
   if (s == null) return "";
@@ -1123,8 +1130,8 @@ function renderFila() {
   cont.innerHTML = filaLote
     .map((it) => `
       <div class="cartao-vinho">
-        <img src="${it.dataURL}" alt="">
-        <div>
+        <img class="cv-foto" src="${it.dataURL}" alt="">
+        <div class="cv-corpo">
           <div class="nome">${esc(it.nome) || "(identificando…)"}</div>
           <div class="meta">${txt[it.status]}${it.erro ? " · " + esc(it.erro) : ""}</div>
         </div>
@@ -1265,8 +1272,8 @@ async function mostrarVinhosDoEndereco(zona, pos) {
   $("#mapa-lista").innerHTML = vinhos
     .map((v) => `
       <div class="cartao-vinho" data-id="${v.id}">
-        ${v.fotoDataURL ? `<img src="${v.fotoDataURL}" alt="">` : `<img alt="">`}
-        <div>
+        ${v.fotoDataURL ? `<img class="cv-foto" src="${v.fotoDataURL}" alt="">` : `<div class="cv-foto cv-sem" aria-hidden="true">🍷</div>`}
+        <div class="cv-corpo">
           <div class="nome">${esc(v.nome) || "(sem nome)"} ${v.safra || ""}</div>
           <div class="meta">${esc(v.produtor) || "—"} · ${v.quantidade || 0}🍾</div>
         </div>
