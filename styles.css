@@ -307,7 +307,7 @@ small.dica { display: block; margin-top: .25rem; }
 }
 
 /* —— Honestidade: estimativa marcada visualmente —— */
-.tag.guarda-longa.estimado { background: transparent; color: var(--texto-fraco); border: 1px dashed #4a7a99; }
+.tag.guarda-longa.estimado { border: 1px dashed rgba(255,255,255,.55); }
 .estimado-aviso { color: var(--estimativa); }
 .vg-honesto { font-size: .76rem; color: var(--texto-fraco); margin: .55rem .15rem 0; line-height: 1.3; }
 

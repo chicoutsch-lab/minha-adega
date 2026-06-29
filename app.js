@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v30";
+const APP_VERSION = "v31";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -98,7 +98,7 @@ function renderVisaoGeral(vinhos) {
       <div class="vg-card"><b>${moedaBR(valor)}</b><span>valor na adega</span></div>
       <div class="vg-card clicavel" id="vg-beber"><b>⏳ ${beber12}</b><span>beber em 12 meses ›</span></div>
     </div>
-    ${pctEstim ? `<p class="vg-honesto">ℹ️ ${pctEstim}% das janelas de consumo são <b>estimativas da IA</b> (não confirmadas). Trate como palpite, não verdade.</p>` : ""}`;
+    ${pctEstim ? `<p class="vg-honesto">ℹ️ A maioria das janelas de consumo é <b>estimada pela IA</b> — confirme com o produtor ou crítico quando puder.</p>` : ""}`;
 
   const btnBeber = $("#vg-beber");
   if (btnBeber)
@@ -238,6 +238,7 @@ function aplicarFiltros(vinhos) {
           <div class="meta">${esc(v.produtor) || "—"} · ${formatarEndereco(v.posicao)}</div>
           <div class="selos">
             ${tagEstado}
+            ${tagDecanter(v)}
             ${tagGuarda(v)}
             ${nota ? `<span class="tag nota">🏆 ${nota.pontos}</span>` : ""}
           </div>
@@ -906,11 +907,12 @@ function ganhaComGuarda(v) {
 }
 function tagGuarda(v) {
   if (!ganhaComGuarda(v)) return "";
-  // Honestidade: se a janela é ESTIMATIVA (chute da IA), o selo de "guarde" vem
-  // tracejado e com "~" — não é instrução confiante, é palpite. Só fica sólido com fonte real.
+  // Honestidade SEM gritar: se a janela é estimativa, o selo mantém a recomendação
+  // ("ganha com guarda") e só ganha uma borda tracejada discreta (a ressalva completa
+  // fica no banner do detalhe). Sólido = fonte confirmada.
   const estimado = v.janelaOrigem !== "fonte";
   return estimado
-    ? `<span class="tag guarda-longa estimado" title="Potencial ESTIMADO pela IA — não confirmado">⏳ ~guarda?</span>`
+    ? `<span class="tag guarda-longa estimado" title="Potencial estimado pela IA — confirme antes de guardar muito">⏳ ganha com guarda</span>`
     : `<span class="tag guarda-longa">⏳ ganha com guarda</span>`;
 }
 
@@ -1091,10 +1093,11 @@ function rotuloEstado(estado) {
 }
 // Honestidade: o estado de consumo vem da janela — e 77% das janelas são estimativa.
 function janelaEstimada(v) { return !!(v.janelaFim && v.janelaOrigem !== "fonte"); }
-// Selo de estado, com "~" e tracejado quando a janela (logo o estado) é palpite da IA.
+// Selo de estado: quando a janela é estimativa, marca só com uma borda tracejada
+// discreta + tooltip (SEM "~" gritado em 77% dos cards — vira papel de parede).
 function seloEstado(v, c) {
   const est = janelaEstimada(v);
-  return `<span class="tag ${c.estado}${est ? " janela-est" : ""}"${est ? ' title="Estado inferido de uma janela ESTIMADA pela IA — não confirmada"' : ""}>${est ? "~" : ""}${rotuloEstado(c.estado)}</span>`;
+  return `<span class="tag ${c.estado}${est ? " janela-est" : ""}"${est ? ' title="Estado inferido de uma janela estimada pela IA — não confirmada"' : ""}>${rotuloEstado(c.estado)}</span>`;
 }
 // Escapa texto para não quebrar o HTML (segurança básica).
 function esc(s) {
