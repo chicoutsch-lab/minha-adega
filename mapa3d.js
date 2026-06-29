@@ -14,6 +14,7 @@
 const Mapa3D = (() => {
   let renderer, scene, camera, grupo, raf, container, onSelectCb, aoRedimensionar;
   let descartarControles;
+  let temaClaro = false; // espelha o tema do app (claro/escuro) no momento de montar
   const clicaveis = []; // objetos que respondem ao toque
 
   // Cores por temperatura (mesmas do app): tinto = vinho, branco = âmbar.
@@ -88,7 +89,8 @@ const Mapa3D = (() => {
   function construir(modelo) {
     const Wc = 3.0, Dc = 1.5, gap = 0.5, Hc = 6.0, nShelves = 5, sh = Hc / nShelves;
     const total = modelo.length * Wc + (modelo.length - 1) * gap;
-    const matFrame = new THREE.MeshStandardMaterial({ color: 0x3a1722, roughness: 0.85, metalness: 0.15 });
+    // Moldura: vinho-escuro no tema escuro; madeira clara (carvalho) no claro.
+    const matFrame = new THREE.MeshStandardMaterial({ color: temaClaro ? 0xb59e86 : 0x3a1722, roughness: 0.85, metalness: 0.15 });
 
     modelo.forEach((porta, pi) => {
       const x0 = -total / 2 + pi * (Wc + gap) + Wc / 2; // centro deste armário
@@ -240,6 +242,7 @@ const Mapa3D = (() => {
     if (typeof THREE === "undefined") { cont.innerHTML = '<p class="vazio-msg">3D indisponível neste navegador.</p>'; return; }
     desmontar();
     container = cont; onSelectCb = onSelect; clicaveis.length = 0;
+    temaClaro = document.documentElement.getAttribute("data-tema") === "claro";
     const w = cont.clientWidth || 360, h = alturaPx || 440;
 
     scene = new THREE.Scene();
@@ -253,12 +256,13 @@ const Mapa3D = (() => {
     cont.innerHTML = "";
     cont.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    scene.add(new THREE.AmbientLight(0xffffff, temaClaro ? 0.7 : 0.45));
     const dir = new THREE.DirectionalLight(0xffffff, 1.0);
     dir.position.set(4, 9, 7);
     scene.add(dir);
-    // Luz quente lateral (clima de adega) — dá volume e brilho às garrafas.
-    const quente = new THREE.DirectionalLight(0xffd9a0, 0.35);
+    // Luz lateral de volume. No tema escuro é quente (clima de adega); no claro
+    // fica quase neutra e suave, para não "avermelhar" a cena.
+    const quente = new THREE.DirectionalLight(temaClaro ? 0xfff3e6 : 0xffd9a0, temaClaro ? 0.15 : 0.35);
     quente.position.set(-6, 3, 4);
     scene.add(quente);
 

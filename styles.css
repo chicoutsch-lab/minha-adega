@@ -330,6 +330,13 @@ small.dica { display: block; margin-top: .25rem; }
 :root[data-tema="claro"] .alerta-item { background: rgba(140,30,50,.06); }
 :root[data-tema="claro"] .bloco-origem { background: rgba(0,0,0,.03); }
 :root[data-tema="claro"] input:focus, :root[data-tema="claro"] select:focus, :root[data-tema="claro"] textarea:focus { outline-color: var(--vinho); }
+/* Mapa no claro: fundo do 3D neutro (não vermelho) + chips/cabeçalhos legíveis */
+:root[data-tema="claro"] .mapa3d { background: radial-gradient(circle at 50% 30%, #efe8e0, #ddd3c6); }
+:root[data-tema="claro"] .chip-tinto { background: rgba(140,30,50,.10); color: var(--vinho); }
+:root[data-tema="claro"] .chip-branco { background: rgba(180,130,30,.15); color: #8a6712; border-color: #c9a23a; }
+:root[data-tema="claro"] .mapa-porta-cab { background: rgba(140,30,50,.12); }
+:root[data-tema="claro"] .tipo-branco .mapa-porta-cab { background: rgba(180,130,30,.15); }
+:root[data-tema="claro"] .mapa-barra { background: rgba(0,0,0,.08); }
 
 /* Foto do rótulo emoldurada — destaca a garrafa em qualquer fundo (resolve o rótulo no claro) */
 .cartao-vinho img, .cv-foto { border: 1px solid var(--linha); }
