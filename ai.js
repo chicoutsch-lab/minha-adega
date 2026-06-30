@@ -96,6 +96,24 @@ Responda SOMENTE com este JSON, sem texto fora:
   "origem": { "min": null, "max": null, "moeda": "", "pais": "", "brlAprox": null, "fonteTipo": "vazio", "base": "" }
 }`;
 
+  // Modo CARDÁPIO: lê a CARTA DE VINHOS (foto) e devolve a lista de vinhos + o
+  // preço cobrado pelo restaurante. Não pesquisa na web — é só leitura da foto.
+  const INSTRUCAO_CARDAPIO = `Você está lendo a CARTA DE VINHOS (cardápio) de um restaurante nesta foto.
+Extraia TODOS os vinhos que conseguir LER. Para cada vinho:
+- "nome": o nome como aparece na carta.
+- "produtor": a vinícola/produtor, se der para inferir; senão "".
+- "safra": o ano (número), se aparecer; senão null. Não chute.
+- "tipo": "tinto", "branco" ou "espumante" pela seção/cor, se der; senão null.
+- "precoRestaurante": o preço em REAIS cobrado no restaurante (só o número, sem "R$"). Se houver
+  preço por GARRAFA e por TAÇA, use o de GARRAFA e registre a taça em "obs". Se só houver taça, use a taça e diga em "obs".
+- "obs": "" ou observação curta (ex.: "taça R$48", "meia-garrafa", "375ml").
+REGRAS DE HONESTIDADE:
+- Só extraia o que estiver LEGÍVEL na foto. NÃO invente vinhos, safras nem preços.
+- Campo ilegível: deixe "" ou null. Não adivinhe.
+- Ignore comida, água, drinks, cervejas e destilados — só VINHOS.
+Responda SOMENTE com este JSON, sem texto fora:
+{ "vinhos": [ { "nome": "", "produtor": "", "safra": null, "tipo": null, "precoRestaurante": null, "obs": "" } ] }`;
+
   function extrairJSON(texto) {
     const ini = texto.indexOf("{");
     const fim = texto.lastIndexOf("}");
@@ -196,6 +214,7 @@ Responda SOMENTE com este JSON, sem texto fora:
       else if (foco === "preco") { instrucao = INSTRUCAO_PRECO; busca = true; }
       else if (foco === "precoOrigem") { instrucao = INSTRUCAO_PRECO_ORIGEM; busca = true; }
       else if (foco === "harmonizacao") { instrucao = INSTRUCAO_HARMONIZACAO; busca = false; }
+      else if (foco === "cardapio") { instrucao = INSTRUCAO_CARDAPIO; busca = false; }
       else if (foco === "rapido" || comBusca === false) { instrucao = INSTRUCAO_RAPIDA; busca = false; }
       else { instrucao = INSTRUCAO_COMPLETA; busca = true; }
       const args = { apiKey, modelo, texto, fotoBase64, fotoMime, comBusca: busca, instrucao };

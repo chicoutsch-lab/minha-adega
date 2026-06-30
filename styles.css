@@ -63,6 +63,16 @@ h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
 .alertas-chevron { color: var(--texto-fraco); font-size: 1.3rem; line-height: 1; transition: transform .15s ease; }
 .alertas-toggle[aria-expanded="true"] .alertas-chevron { transform: rotate(90deg); }
 .alertas-corpo { margin-top: .5rem; }
+
+/* —— Modo Restaurante —— */
+.rest-foto-btn { display: block; width: 100%; text-align: center; background: var(--vinho); color: #fff; font-weight: 600; padding: .85rem; border-radius: 10px; cursor: pointer; }
+.rest-status { margin: .7rem 0; font-size: .9rem; color: var(--texto-fraco); }
+.rest-status .erro { color: var(--alerta); }
+.rest-preview { width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; border: 1px solid var(--linha); margin-bottom: .6rem; }
+.rest-item { display: flex; gap: .6rem; align-items: center; background: var(--cartao); border: 1px solid var(--linha); border-radius: 10px; padding: .6rem .7rem; margin-bottom: .45rem; }
+.rest-item-corpo { min-width: 0; flex: 1; }
+.rest-obs { font-style: italic; }
+.rest-preco { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .alerta-item {
   display: flex; align-items: center; gap: .6rem;
   background: rgba(0,0,0,.2); border-radius: 10px;

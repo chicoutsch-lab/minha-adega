@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v34";
+const APP_VERSION = "v35";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -453,13 +453,12 @@ $("#f-foto").addEventListener("change", async (e) => {
 });
 
 // Reduz a imagem (máx. 900px) e converte para JPEG — economiza espaço.
-function processarFoto(arquivo) {
+function processarFoto(arquivo, max = 900, q = 0.7) {
   return new Promise((ok) => {
     const leitor = new FileReader();
     leitor.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const max = 900;
         let { width: w, height: h } = img;
         if (w > max || h > max) {
           const r = Math.min(max / w, max / h);
@@ -469,13 +468,69 @@ function processarFoto(arquivo) {
         const cv = document.createElement("canvas");
         cv.width = w; cv.height = h;
         cv.getContext("2d").drawImage(img, 0, 0, w, h);
-        const dataURL = cv.toDataURL("image/jpeg", 0.7);
+        const dataURL = cv.toDataURL("image/jpeg", q);
         ok({ dataURL, base64: dataURL.split(",")[1], mime: "image/jpeg" });
       };
       img.src = leitor.result;
     };
     leitor.readAsDataURL(arquivo);
   });
+}
+
+// ——————————————————————————————————————————————————————————
+// MODO RESTAURANTE — Parte 1: fotografa a carta e a IA lê os vinhos + preços.
+// (A comparação com o seu catálogo é a Parte 2, ainda por vir.)
+// ——————————————————————————————————————————————————————————
+async function lerCardapio(e) {
+  const arquivo = e.target.files && e.target.files[0];
+  e.target.value = ""; // permite fotografar de novo a mesma carta
+  if (!arquivo) return;
+  const provedor = (await DB.lerConfig("provedor")) || "anthropic";
+  const apiKey = await DB.lerConfig("apiKey");
+  const modelo = (await DB.lerConfig("modelo")) || "claude-sonnet-4-6";
+  const status = $("#rest-status");
+  if (!apiKey) {
+    status.innerHTML = `<span class="erro">⚠️ Configure sua chave de API nos Ajustes primeiro.</span>`;
+    return;
+  }
+  // Carta tem letra pequena: usa resolução maior (1600px) e qualidade melhor.
+  const foto = await processarFoto(arquivo, 1600, 0.82);
+  $("#rest-preview").src = foto.dataURL;
+  $("#rest-preview").classList.remove("oculto");
+  $("#rest-lista").innerHTML = "";
+  status.innerHTML = "⏳ Lendo a carta… (pode levar alguns segundos)";
+  try {
+    const res = await IA.extrair({
+      provedor, apiKey, modelo, foco: "cardapio",
+      texto: "Leia a carta de vinhos desta foto.",
+      fotoBase64: foto.base64, fotoMime: foto.mime,
+    });
+    const vinhos = (res && Array.isArray(res.vinhos)) ? res.vinhos : [];
+    renderCardapio(vinhos);
+    status.innerHTML = vinhos.length
+      ? `✅ Li <b>${vinhos.length}</b> vinho(s) na carta. <span class="dica">(Próximo passo: comparar com o seu catálogo.)</span>`
+      : "🤔 Não consegui ler vinhos nessa foto. Tente mais perto, com boa luz e a carta reta.";
+  } catch (err) {
+    status.innerHTML = `<span class="erro">❌ ${esc(err.message || String(err))}</span>`;
+  }
+}
+
+function renderCardapio(vinhos) {
+  const cont = $("#rest-lista");
+  if (!vinhos.length) { cont.innerHTML = ""; return; }
+  cont.innerHTML = vinhos.map((v) => {
+    const preco = (v.precoRestaurante != null && v.precoRestaurante !== "")
+      ? `R$ ${v.precoRestaurante}` : "preço não lido";
+    const sub = [v.produtor, v.safra, v.tipo].filter(Boolean).join(" · ");
+    return `<div class="rest-item">
+      <div class="rest-item-corpo">
+        <div class="titulo">${esc(v.nome || "(sem nome)")}</div>
+        ${sub ? `<div class="sub">${esc(sub)}</div>` : ""}
+        ${v.obs ? `<div class="sub rest-obs">${esc(v.obs)}</div>` : ""}
+      </div>
+      <div class="rest-preco">${esc(preco)}</div>
+    </div>`;
+  }).join("");
 }
 
 // —— Botão "Buscar dados (IA)" ——
@@ -698,6 +753,8 @@ $("#alertas-toggle").addEventListener("click", () => {
   $("#alertas-toggle").setAttribute("aria-expanded", String(!escondido));
 });
 $("#ir-desejos").addEventListener("click", () => { irPara("tela-desejos"); renderDesejos(); });
+$("#ir-restaurante").addEventListener("click", () => irPara("tela-restaurante"));
+$("#rest-foto").addEventListener("change", lerCardapio);
 $("#add-desejo").addEventListener("click", () => abrirFormNovo(true));
 
 // —— Excluir ——
