@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v36";
+const APP_VERSION = "v37";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -542,16 +542,20 @@ function _score(mw, cat) {
   return { p, r };
 }
 function _melhorMatch(mw, catalogo) {
-  let best = null, bp = -1, bEff = -1;
+  // Só consideramos matches FORTES (precisão >= 0,8) — abaixo disso é melhor dizer
+  // "não tenho" do que errar. Entre os fortes, um placar combinado escolhe:
+  //   placar = precisão + 0,5·exatidão(recall) + 0,1 se for da ADEGA (você tem).
+  // O bônus da adega faz um vinho que está na adega E nos desejos aparecer como
+  // "você tem" (regra do Francisco), sem casar com um vinho só parecido (esse perde
+  // no recall e fica de fora mesmo com o bônus).
+  let best = null, bestC = -1;
   for (const c of catalogo) {
     const { p, r } = _score(mw, c);
-    // Precisão decide primeiro. No empate, "eficácia" = exatidão (recall) + um bônus
-    // de 0,2 para o que você TEM em casa (adega) — assim um vinho duplicado na adega
-    // e nos desejos aparece como "você tem", sem casar com um vinho parecido errado.
-    const eff = r + (c.desejo ? 0 : 0.2);
-    if (p > bp || (p === bp && eff > bEff)) { bp = p; bEff = eff; best = c; }
+    if (p < 0.8) continue;
+    const comb = p + 0.5 * r + (c.desejo ? 0 : 0.1);
+    if (comb > bestC) { bestC = comb; best = c; }
   }
-  return bp >= 0.8 ? best : null; // abaixo de 0,8: melhor dizer "não tenho" do que errar
+  return best;
 }
 function _midPreco(p) {
   if (!p) return null;
