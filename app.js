@@ -10,7 +10,7 @@ const gerarId = () => "v" + Date.now() + Math.floor(Math.random() * 1000);
 
 // Versão do app — DEVE bater com o CACHE do sw.js. Mostrada nos Ajustes
 // para você conferir num relance se o iPhone já pegou a versão nova.
-const APP_VERSION = "v35";
+const APP_VERSION = "v36";
 
 // Guarda a foto atual do formulário (em formato dataURL e base64 para a IA).
 let fotoAtual = { dataURL: "", base64: "", mime: "" };
@@ -506,31 +506,155 @@ async function lerCardapio(e) {
       fotoBase64: foto.base64, fotoMime: foto.mime,
     });
     const vinhos = (res && Array.isArray(res.vinhos)) ? res.vinhos : [];
-    renderCardapio(vinhos);
+    await analisarCardapio(vinhos);
     status.innerHTML = vinhos.length
-      ? `✅ Li <b>${vinhos.length}</b> vinho(s) na carta. <span class="dica">(Próximo passo: comparar com o seu catálogo.)</span>`
+      ? `✅ Li <b>${vinhos.length}</b> vinho(s) — veja a análise abaixo.`
       : "🤔 Não consegui ler vinhos nessa foto. Tente mais perto, com boa luz e a carta reta.";
   } catch (err) {
     status.innerHTML = `<span class="erro">❌ ${esc(err.message || String(err))}</span>`;
   }
 }
 
-function renderCardapio(vinhos) {
+// —— Parte 2: cruza a carta com o catálogo e dá o veredito ——
+let _cardapioNovos = [];
+
+// Normaliza um nome para comparar (minúsculas, sem acento, sem pontuação).
+function _normNome(s) {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+}
+const _STOP = new Set(["de","da","do","la","el","le","les","the","by","du","des","di","e"]);
+// Palavras "fortes" do nome (ignora artigos e o ano da safra).
+function _tokens(s) {
+  return _normNome(s).split(" ").filter((t) => t.length >= 2 && !/^\d+$/.test(t) && !_STOP.has(t));
+}
+// p = quanto do nome da CARTA foi achado; r = quanto do nome do CATÁLOGO foi coberto.
+// Usar os dois evita casar "Luca Malbec" com "Nico by Luca ... Malbec" (r baixo).
+function _score(mw, cat) {
+  const a = _tokens((mw.nome || "") + " " + (mw.produtor || ""));
+  const b = new Set(_tokens((cat.nome || "") + " " + (cat.produtor || "")));
+  if (!a.length || !b.size) return { p: 0, r: 0 };
+  const inter = a.filter((t) => b.has(t)).length;
+  let p = inter / a.length;
+  const r = inter / b.size;
+  const nm = _normNome(mw.nome), cn = _normNome(cat.nome);
+  if (nm && cn && (cn.includes(nm) || nm.includes(cn)) && Math.min(nm.length, cn.length) >= 5) p = Math.max(p, 0.9);
+  return { p, r };
+}
+function _melhorMatch(mw, catalogo) {
+  let best = null, bp = -1, bEff = -1;
+  for (const c of catalogo) {
+    const { p, r } = _score(mw, c);
+    // Precisão decide primeiro. No empate, "eficácia" = exatidão (recall) + um bônus
+    // de 0,2 para o que você TEM em casa (adega) — assim um vinho duplicado na adega
+    // e nos desejos aparece como "você tem", sem casar com um vinho parecido errado.
+    const eff = r + (c.desejo ? 0 : 0.2);
+    if (p > bp || (p === bp && eff > bEff)) { bp = p; bEff = eff; best = c; }
+  }
+  return bp >= 0.8 ? best : null; // abaixo de 0,8: melhor dizer "não tenho" do que errar
+}
+function _midPreco(p) {
+  if (!p) return null;
+  const lo = p.min, hi = p.max;
+  if (lo && hi) return (lo + hi) / 2;
+  return hi || lo || null;
+}
+// Converte "1.250" / "R$ 980" → número, respeitando o ponto como milhar.
+function _precoNum(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return v;
+  const s = String(v).replace(/[^\d.,]/g, "").replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+async function analisarCardapio(vinhos) {
+  const catalogo = await DB.todos();
+  const itens = vinhos.map((mw) => ({ mw, match: _melhorMatch(mw, catalogo) }));
+  renderAnalise(itens);
+}
+
+function renderAnalise(itens) {
   const cont = $("#rest-lista");
-  if (!vinhos.length) { cont.innerHTML = ""; return; }
-  cont.innerHTML = vinhos.map((v) => {
-    const preco = (v.precoRestaurante != null && v.precoRestaurante !== "")
-      ? `R$ ${v.precoRestaurante}` : "preço não lido";
-    const sub = [v.produtor, v.safra, v.tipo].filter(Boolean).join(" · ");
+  _cardapioNovos = [];
+  if (!itens.length) { cont.innerHTML = ""; return; }
+  const novos = [];
+  let nTem = 0, nDes = 0;
+  const cards = itens.map(({ mw, match }) => {
+    const pr = _precoNum(mw.precoRestaurante);
+    const prTxt = (mw.precoRestaurante != null && mw.precoRestaurante !== "") ? `R$ ${mw.precoRestaurante}` : "preço não lido";
+    let badge, sub;
+    if (match) {
+      const desejo = !!match.desejo;
+      if (desejo) nDes++; else nTem++;
+      const mid = _midPreco(match.preco);
+      const partes = [];
+      if (mid) partes.push(`${desejo ? "importador" : "em casa"} ~R$${Math.round(mid)}`);
+      const po = match.precoOrigem || {};
+      if (po.brlAprox) partes.push(`origem ~R$${po.brlAprox}`);
+      if (pr && mid) {
+        const mult = pr / mid;
+        const emo = mult <= 2.5 ? "📗" : mult <= 3.5 ? "📙" : "📕";
+        partes.push(`carta = ${mult.toFixed(1)}× o ${desejo ? "importador" : "varejo"} ${emo}`);
+      }
+      badge = desejo
+        ? `<span class="rest-badge des">🛒 Lista de desejos</span>`
+        : `<span class="rest-badge tem">🟢 Você tem</span>`;
+      sub = partes.join(" · ") || "sem preço cadastrado";
+    } else {
+      novos.push(mw);
+      badge = `<span class="rest-badge novo">❓ Não tenho</span>`;
+      sub = "sem dado — entra na lista pra pesquisar";
+    }
+    const nm = esc(mw.nome || "(sem nome)") + (mw.safra ? ` ${mw.safra}` : "");
     return `<div class="rest-item">
       <div class="rest-item-corpo">
-        <div class="titulo">${esc(v.nome || "(sem nome)")}</div>
-        ${sub ? `<div class="sub">${esc(sub)}</div>` : ""}
-        ${v.obs ? `<div class="sub rest-obs">${esc(v.obs)}</div>` : ""}
+        <div class="titulo">${nm}</div>
+        <div class="rest-sub2">${badge}</div>
+        <div class="sub">${esc(sub)}</div>
       </div>
-      <div class="rest-preco">${esc(preco)}</div>
+      <div class="rest-preco">${esc(prTxt)}</div>
     </div>`;
-  }).join("");
+  });
+  _cardapioNovos = novos;
+  let html = `<div class="rest-resumo">🟢 ${nTem} em casa · 🛒 ${nDes} na lista · ❓ ${novos.length} novos</div>` + cards.join("");
+  if (novos.length) {
+    html += `<button id="rest-copiar" class="rest-foto-btn rest-copiar">📋 Copiar comando p/ pesquisar os ${novos.length} novos (Claude Code)</button>`;
+  }
+  cont.innerHTML = html;
+  const btn = $("#rest-copiar");
+  if (btn) btn.addEventListener("click", copiarComando);
+}
+
+// Monta o comando pronto para colar no Claude Code (app Claude → Código).
+function montarComando() {
+  const linhas = _cardapioNovos.map((v) =>
+    `- ${v.nome || "(sem nome)"}${v.safra ? ` ${v.safra}` : ""}${_precoNum(v.precoRestaurante) ? ` (no restaurante R$ ${v.precoRestaurante})` : ""}`);
+  return `Você está no repositório "minha-adega". Leia o CLAUDE.md e siga as regras de honestidade.
+
+Estes vinhos vieram da carta de um restaurante e NÃO estão no meu catálogo. Para cada um, pesquise o PREÇO DE VAREJO NO BRASIL e o PREÇO NA ORIGEM (com loja real citada; marque fonte/estimativa/vazio) e me diga se o preço do restaurante (entre parênteses) é bom negócio comparado ao varejo. NÃO precisa adicionar ao catálogo, a menos que eu peça depois.
+
+${linhas.join("\n")}`;
+}
+
+async function copiarComando() {
+  const txt = montarComando();
+  const status = $("#rest-status");
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(txt);
+      status.innerHTML = "✅ Comando copiado! Abra o app Claude → <b>Código</b> (repo minha-adega) e cole.";
+      return;
+    }
+  } catch (e) { /* cai no fallback abaixo */ }
+  mostrarComandoManual(txt);
+}
+function mostrarComandoManual(txt) {
+  const ta = document.createElement("textarea");
+  ta.className = "rest-fallback"; ta.readOnly = true; ta.value = txt;
+  $("#rest-lista").prepend(ta);
+  ta.focus(); ta.select();
+  $("#rest-status").innerHTML = "Selecione o texto acima e copie (toque e segure → Copiar).";
 }
 
 // —— Botão "Buscar dados (IA)" ——
